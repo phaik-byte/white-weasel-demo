@@ -9,10 +9,71 @@ const PORT = process.env.PORT || 3000;
 // KOHDELISTA (kovakoodattu)
 // ============================================
 const TARGET_DOMAINS = [
-    'suomi.fi', 'valtioneuvosto.fi', 'eduskunta.fi',
-    'helsinki.fi', 'tampere.fi', 'turku.fi',
-    'oulu.fi', 'jyvaskyla.fi', 'lahti.fi',
-    'kuopio.fi', 'pori.fi', 'lappeenranta.fi'
+    // Ravintolat ja kahvilat
+    'ravintola.fi',
+    'kahvila.fi',
+    'ravintolakoti.fi',
+    'lounasravintola.fi',
+    'konditoria.fi',
+    'leipomo.fi',
+    'pizzeria.fi',
+    'grilli.fi',
+    
+    // Kauneus ja hyvinvointi
+    'parturi.fi',
+    'kampaamo.fi',
+    'hieroja.fi',
+    'fysioterapia.fi',
+    'kosmetologi.fi',
+    'kuntosali.fi',
+    
+    // Rakentaminen ja remontti
+    'rakennus.fi',
+    'remontti.fi',
+    'maalarit.fi',
+    'lvi.fi',
+    'sahkotyo.fi',
+    'lattianhoito.fi',
+    
+    // Kiinteistöt ja asuminen
+    'kiinteisto.fi',
+    'asunto.fi',
+    'vuokraus.fi',
+    'sisustus.fi',
+    
+    // Kuljetus ja logistiikka
+    'kuljetus.fi',
+    'logistiikka.fi',
+    'muutto.fi',
+    'taksi.fi',
+    
+    // Tietotekniikka ja digi
+    'it-palvelut.fi',
+    'verkkosivut.fi',
+    'digimarkkinointi.fi',
+    'ohjelmointi.fi',
+    'tietoturva.fi',
+    
+    // Koulutus ja konsultointi
+    'koulutus.fi',
+    'konsultointi.fi',
+    'valmennus.fi',
+    'kielikoulu.fi',
+    
+    // Terveys ja hyvinvointi
+    'optikko.fi',
+    'apteekki.fi',
+    'ravitsemus.fi',
+    
+    // Kauppa ja verkkokauppa
+    'verkkokauppa.fi',
+    'puutarha.fi',
+    'kukkakauppa.fi',
+    
+    // Auto ja liikenne
+    'autokorjaamo.fi',
+    'renkaat.fi',
+    'varaosat.fi'
 ];
 
 console.log('📋 ' + TARGET_DOMAINS.length + ' kohdetta listassa');
