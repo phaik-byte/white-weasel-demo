@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 3000;
 
 // Ympäristömuuttujat
 const HIBP_API_KEY = process.env.HIBP_API_KEY || 'testaa-ilman-avainta';
-const AUTO_SCAN_ENABLED = process.env.AUTO_SCAN_ENABLED !== 'true'; // MUUTETTU: false oletuksena
+const AUTO_SCAN_ENABLED = process.env.AUTO_SCAN_ENABLED === 'true'; // VAIN jos erikseen asetettu
 const SCAN_INTERVAL = parseInt(process.env.SCAN_INTERVAL) || 86400000; // 24h
 
 app.use(express.static('public'));
@@ -62,7 +62,7 @@ app.get('/', (req, res) => {
         <div id="result">
             <p class="loading">Odota skannausta...</p>
         </div>
-        <div class="footer">White Weasel Recon v1.1 — Taustaskannauksella</div>
+        <div class="footer">White Weasel Recon v1.2 — Manuaalinen skannaus</div>
 
         <script>
         async function scan() {
@@ -507,7 +507,7 @@ function generateReportData(results) {
 }
 
 // ============================================
-// 5. API-REITIT (KORJATTU)
+// 5. API-REITIT
 // ============================================
 let scanState = {
     status: 'idle',
@@ -579,59 +579,14 @@ app.get('/api/scan', async (req, res) => {
     }
 });
 
-// KORJATTU: Tämä vastaa heti ja käynnistää skannauksen taustalla
 app.post('/api/scan-batch', async (req, res) => {
     if (scanState.status === 'scanning') {
         return res.status(409).json({ message: 'Skannaus jo käynnissä!' });
     }
-    // Käynnistä skannaus taustalla (älä odota)
+    // Käynnistä skannaus taustalla
     runBatchScan().catch(console.error);
-    // Vastaa heti selaimelle
     res.json({ message: 'Massaskannaus käynnistetty! Seuraa edistymistä tilapalkista.' });
 });
 
 app.get('/api/status', (req, res) => {
     res.json({
-        status: scanState.status,
-        currentIndex: scanState.currentIndex,
-        total: scanState.total,
-        currentDomain: scanState.currentDomain,
-        lastScan: scanState.lastScan,
-        resultsCount: scanState.results.length
-    });
-});
-
-app.get('/api/report', (req, res) => {
-    if (scanState.results.length === 0) {
-        return res.status(404).json({ error: 'Ei skannattuja kohteita. Suorita ensin skannaus.' });
-    }
-    const report = generateReportData(scanState.results);
-    res.json(report);
-});
-
-app.get('/api/report/download', async (req, res) => {
-    if (scanState.results.length === 0) {
-        return res.status(404).json({ error: 'Ei skannattuja kohteita.' });
-    }
-    const report = generateReportData(scanState.results);
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', 'attachment; filename=white-weasel-report-' + new Date().toISOString().slice(0,10) + '.json');
-    res.json(report);
-});
-
-// ============================================
-// 6. KÄYNNISTYS
-// ============================================
-app.listen(PORT, async () => {
-    console.log('🦡 White Weasel Recon v1.1 — Taustaskannauksella');
-    console.log('📋 ' + TARGET_DOMAINS.length + ' kohdetta listassa');
-    console.log('✅ Palvelin käynnissä portissa ' + PORT);
-    await loadResults();
-
-    if (AUTO_SCAN_ENABLED) {
-        console.log('⏳ Ensimmäinen skannaus 30 sekunnin kuluttua...');
-        setTimeout(() => runBatchScan().catch(console.error), 30000);
-        setInterval(() => runBatchScan().catch(console.error), SCAN_INTERVAL);
-        console.log('⏰ Skannausväli: ' + (SCAN_INTERVAL/3600000) + ' tuntia');
-    }
-});
