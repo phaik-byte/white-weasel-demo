@@ -4,57 +4,8 @@ const dns = require('dns').promises;
 const whois = require('whois-json');
 const fs = require('fs').promises;
 const path = require('path');
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-// HIBP API-avain
-const HIBP_API_KEY = process.env.HIBP_API_KEY || 'testaa-ilman-avainta';
-
-// Ota automatisointi käyttöön ympäristömuuttujalla (oletuksena päällä)
-const AUTO_SCAN_ENABLED = process.env.AUTO_SCAN_ENABLED !== 'false';
-const SCAN_INTERVAL = parseInt(process.env.SCAN_INTERVAL) || 60000; // 60 sekuntia oletuksena
-
-app.use(express.static('public'));
-
-// ============================================
-// 1. KÄYTTÖLIITTYMÄ (sama kuin aiemmin)
-// ============================================
-app.get('/', (req, res) => {
-    res.send(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>White Weasel Recon</title>
-        <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
-            h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
-            .logo { font-size: 2em; font-weight: bold; }
-            .weasel { color: #2c3e50; }
-            .white { color: #ecf0f1; background: #2c3e50; padding: 2px 8px; border-radius: 5px; }
-            input, button { padding: 12px; font-size: 16px; margin: 5px; }
-            input { width: 60%; border: 2px solid #bdc3c7; border-radius: 5px; }
-            button { background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; }
-            button:hover { background: #2980b9; }
-            #result { margin-top: 20px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-            #autostatus { margin-top: 10px; padding: 10px; background: #e8f4f8; border-radius: 5px; border-left: 4px solid #3498db; }
-            .loading { color: #3498db; font-style: italic; }
-            .error { color: #e74c3c; font-weight: bold; }
-            .success { color: #27ae60; }
-            pre { background: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 5px; overflow-x: auto; }
-            .footer { margin-top: 30px; font-size: 12px; color: #7f8c8d; text-align: center; }
-        </style>
-    </head>
-    <body>
-        <h1><span class="white">White</span><span class="weasel">Weasel</span> 🦡</h1>
-        <p>Syötä verkkotunnus (esim. <strong>suomi.fi</strong>)</p>
-        <input type="text" id="domain" placeholder="esim. suomi.fi" value="suomi.fi">const express = require('express');
-const axios = require('axios');
-const dns = require('dns').promises;
-const whois = require('whois-json');
-const fs = require('fs').promises;
-const path = require('path');
 const https = require('https');
-const tls = require('tls');
+const net = require('net');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -77,13 +28,13 @@ app.get('/', (req, res) => {
     <head>
         <title>White Weasel Recon</title>
         <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
             h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
             .logo { font-size: 2em; font-weight: bold; }
             .weasel { color: #2c3e50; }
             .white { color: #ecf0f1; background: #2c3e50; padding: 2px 8px; border-radius: 5px; }
             input, button { padding: 12px; font-size: 16px; margin: 5px; }
-            input { width: 55%; border: 2px solid #bdc3c7; border-radius: 5px; }
+            input { width: 50%; border: 2px solid #bdc3c7; border-radius: 5px; }
             button { background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; }
             button:hover { background: #2980b9; }
             button.danger { background: #e74c3c; }
@@ -94,12 +45,20 @@ app.get('/', (req, res) => {
             .error { color: #e74c3c; font-weight: bold; }
             .success { color: #27ae60; }
             .warning { color: #f39c12; }
+            .port-open { color: #e74c3c; font-weight: bold; }
+            .port-closed { color: #27ae60; }
+            .port-filtered { color: #f39c12; }
             .ssl-valid { color: #27ae60; font-weight: bold; }
             .ssl-expired { color: #e74c3c; font-weight: bold; }
             .ssl-warning { color: #f39c12; font-weight: bold; }
             pre { background: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 5px; overflow-x: auto; font-size: 13px; }
             .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
             .card { background: #f8f9fa; padding: 10px; border-radius: 5px; border-left: 3px solid #3498db; }
+            .port-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 10px 0; }
+            .port-item { padding: 8px 12px; border-radius: 4px; font-size: 14px; text-align: center; }
+            .port-item.open { background: #fee; color: #c0392b; border: 1px solid #e74c3c; }
+            .port-item.closed { background: #e8f8e8; color: #27ae60; border: 1px solid #27ae60; }
+            .port-item.filtered { background: #fef9e7; color: #f39c12; border: 1px solid #f39c12; }
             .footer { margin-top: 30px; font-size: 12px; color: #7f8c8d; text-align: center; }
         </style>
     </head>
@@ -115,7 +74,7 @@ app.get('/', (req, res) => {
         <div id="result">
             <p class="loading">Odota skannausta...</p>
         </div>
-        <div class="footer">White Weasel Recon v0.3 — SSL-tarkistuksella</div>
+        <div class="footer">White Weasel Recon v0.4 — Porttiskannauksella</div>
 
         <script>
         async function scan() {
@@ -169,6 +128,45 @@ app.get('/', (req, res) => {
             let html = '<h2>📊 Skannaustulokset</h2>';
             html += '<p><strong>🔍 Verkkotunnus:</strong> ' + domain + '</p>';
 
+            // PORTIT (uusi!)
+            if (data.ports) {
+                html += '<h3>🚪 Porttiskannaus</h3>';
+                const openPorts = data.ports.filter(p => p.state === 'open');
+                const closedPorts = data.ports.filter(p => p.state === 'closed');
+                const filteredPorts = data.ports.filter(p => p.state === 'filtered');
+                
+                html += '<p><span class="port-open">🔴 Avoinna: ' + openPorts.length + '</span> | ';
+                html += '<span class="port-closed">🟢 Kiinni: ' + closedPorts.length + '</span> | ';
+                html += '<span class="port-filtered">🟡 Suodatettu: ' + filteredPorts.length + '</span></p>';
+
+                if (openPorts.length > 0) {
+                    html += '<div class="port-grid">';
+                    openPorts.forEach(p => {
+                        const service = getServiceName(p.port);
+                        html += '<div class="port-item open"><strong>' + p.port + '</strong><br>' + service + '</div>';
+                    });
+                    html += '</div>';
+                }
+
+                if (closedPorts.length > 0) {
+                    html += '<details><summary>🟢 Suljetut portit (' + closedPorts.length + ')</summary>';
+                    html += '<div class="port-grid">';
+                    closedPorts.forEach(p => {
+                        html += '<div class="port-item closed">' + p.port + '</div>';
+                    });
+                    html += '</div></details>';
+                }
+
+                if (filteredPorts.length > 0) {
+                    html += '<details><summary>🟡 Suodatetut portit (' + filteredPorts.length + ')</summary>';
+                    html += '<div class="port-grid">';
+                    filteredPorts.forEach(p => {
+                        html += '<div class="port-item filtered">' + p.port + '</div>';
+                    });
+                    html += '</div></details>';
+                }
+            }
+
             // SSL
             if (data.ssl) {
                 html += '<h3>🔒 SSL-sertifikaatti</h3>';
@@ -203,7 +201,7 @@ app.get('/', (req, res) => {
                 }
             } else {
                 html += '<h3>🔒 SSL-sertifikaatti</h3>';
-                html += '<p class="error">❌ SSL-yhteyttä ei voitu muodostaa. Sivusto ei tue HTTPS:ää tai sertifikaatti on virheellinen.</p>';
+                html += '<p class="error">❌ SSL-yhteyttä ei voitu muodostaa.</p>';
             }
 
             // WHOIS
@@ -237,6 +235,33 @@ app.get('/', (req, res) => {
             return html;
         }
 
+        function getServiceName(port) {
+            const services = {
+                20: 'FTP-data',
+                21: 'FTP',
+                22: 'SSH',
+                23: 'Telnet',
+                25: 'SMTP',
+                53: 'DNS',
+                80: 'HTTP',
+                110: 'POP3',
+                143: 'IMAP',
+                443: 'HTTPS',
+                465: 'SMTPS',
+                587: 'SMTP',
+                993: 'IMAPS',
+                995: 'POP3S',
+                3306: 'MySQL',
+                3389: 'RDP',
+                5432: 'PostgreSQL',
+                6379: 'Redis',
+                8080: 'HTTP-Proxy',
+                8443: 'HTTPS-Alt',
+                27017: 'MongoDB'
+            };
+            return services[port] || 'Tuntematon';
+        }
+
         window.onload = function() {
             scan();
             updateStatus();
@@ -249,7 +274,84 @@ app.get('/', (req, res) => {
 });
 
 // ============================================
-// 2. SSL-TARKISTUS (uusi funktio!)
+// 2. PORTTISKANNAUS (uusi!)
+// ============================================
+const COMMON_PORTS = [
+    { port: 20, name: 'FTP-data' },
+    { port: 21, name: 'FTP' },
+    { port: 22, name: 'SSH' },
+    { port: 23, name: 'Telnet' },
+    { port: 25, name: 'SMTP' },
+    { port: 53, name: 'DNS' },
+    { port: 80, name: 'HTTP' },
+    { port: 110, name: 'POP3' },
+    { port: 143, name: 'IMAP' },
+    { port: 443, name: 'HTTPS' },
+    { port: 465, name: 'SMTPS' },
+    { port: 587, name: 'SMTP' },
+    { port: 993, name: 'IMAPS' },
+    { port: 995, name: 'POP3S' },
+    { port: 3306, name: 'MySQL' },
+    { port: 3389, name: 'RDP' },
+    { port: 5432, name: 'PostgreSQL' },
+    { port: 6379, name: 'Redis' },
+    { port: 8080, name: 'HTTP-Proxy' },
+    { port: 8443, name: 'HTTPS-Alt' },
+    { port: 27017, name: 'MongoDB' }
+];
+
+async function checkPort(host, port, timeout = 3000) {
+    return new Promise((resolve) => {
+        const startTime = Date.now();
+        const socket = new net.Socket();
+
+        socket.setTimeout(timeout);
+
+        socket.on('connect', () => {
+            const duration = Date.now() - startTime;
+            socket.destroy();
+            resolve({ port, state: 'open', duration });
+        });
+
+        socket.on('timeout', () => {
+            socket.destroy();
+            resolve({ port, state: 'filtered', duration: timeout });
+        });
+
+        socket.on('error', (err) => {
+            socket.destroy();
+            if (err.code === 'ECONNREFUSED') {
+                resolve({ port, state: 'closed', duration: Date.now() - startTime });
+            } else if (err.code === 'ENOTFOUND') {
+                resolve({ port, state: 'error', error: 'Host not found' });
+            } else {
+                resolve({ port, state: 'filtered', error: err.code });
+            }
+        });
+
+        socket.connect(port, host);
+    });
+}
+
+async function scanPorts(host) {
+    console.log(`🚪 Skannataan portteja kohteelle ${host}...`);
+    const results = [];
+    
+    for (const p of COMMON_PORTS) {
+        const result = await checkPort(host, p.port);
+        results.push({
+            ...result,
+            name: p.name
+        });
+        // Pieni viive, ettei kuormiteta liikaa
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    return results;
+}
+
+// ============================================
+// 3. SSL-TARKISTUS
 // ============================================
 async function checkSSL(domain) {
     return new Promise((resolve) => {
@@ -257,7 +359,7 @@ async function checkSSL(domain) {
             host: domain,
             port: 443,
             method: 'HEAD',
-            rejectUnauthorized: false, // Hyväksytään myös vanhentuneet, jotta saadaan tieto
+            rejectUnauthorized: false,
             timeout: 10000
         };
 
@@ -312,13 +414,20 @@ async function checkSSL(domain) {
 }
 
 // ============================================
-// 3. SKANNAUSLOGIIKKA (päivitetty SSL:llä)
+// 4. SKANNAUSLOGIIKKA (päivitetty porteilla)
 // ============================================
 async function performScan(domain) {
-    const result = { domain, whois: null, dns: null, hibp: null, ssl: null };
+    const result = { domain, whois: null, dns: null, hibp: null, ssl: null, ports: null };
     
     try {
-        // SSL (uusi!)
+        // PORTIT (uusi!)
+        try {
+            result.ports = await scanPorts(domain);
+        } catch (e) {
+            result.ports = { error: e.message };
+        }
+
+        // SSL
         try {
             result.ssl = await checkSSL(domain);
         } catch (e) {
@@ -374,7 +483,7 @@ async function performScan(domain) {
 }
 
 // ============================================
-// 4. AUTOMAATTINEN SKANNAUS
+// 5. AUTOMAATTINEN SKANNAUS
 // ============================================
 const TARGET_DOMAINS = [
     'suomi.fi',
@@ -429,7 +538,7 @@ async function runAutoScan() {
         return;
     }
 
-    console.log('🚀 Käynnistetään automaattinen skannaus (SSL mukaanlukien)!');
+    console.log('🚀 Käynnistetään automaattinen skannaus (portit mukaanlukien)!');
     scanState.status = 'scanning';
     scanState.results = [];
 
@@ -453,7 +562,7 @@ async function runAutoScan() {
 }
 
 // ============================================
-// 5. API-REITIT
+// 6. API-REITIT
 // ============================================
 app.get('/api/scan', async (req, res) => {
     const domain = req.query.domain;
@@ -490,11 +599,12 @@ app.get('/api/results', (req, res) => {
 });
 
 // ============================================
-// 6. KÄYNNISTYS
+// 7. KÄYNNISTYS
 // ============================================
 app.listen(PORT, async () => {
-    console.log(`🦡 White Weasel Recon v0.3 — SSL-tarkistuksella`);
+    console.log(`🦡 White Weasel Recon v0.4 — Porttiskannauksella`);
     console.log(`📋 ${TARGET_DOMAINS.length} kohdetta listassa`);
+    console.log(`🚪 Skannataan ${COMMON_PORTS.length} yleistä porttia per kohde`);
     await loadResults();
 
     if (AUTO_SCAN_ENABLED) {
