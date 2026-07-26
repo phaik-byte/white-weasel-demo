@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 3000;
 
 // Ympäristömuuttujat
 const HIBP_API_KEY = process.env.HIBP_API_KEY || 'testaa-ilman-avainta';
-const AUTO_SCAN_ENABLED = process.env.AUTO_SCAN_ENABLED !== 'false';
+const AUTO_SCAN_ENABLED = process.env.AUTO_SCAN_ENABLED !== 'true'; // MUUTETTU: false oletuksena
 const SCAN_INTERVAL = parseInt(process.env.SCAN_INTERVAL) || 86400000; // 24h
 
 app.use(express.static('public'));
