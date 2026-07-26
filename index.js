@@ -28,13 +28,13 @@ app.get('/', (req, res) => {
     <head>
         <title>White Weasel Recon</title>
         <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 1100px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
             h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
             .logo { font-size: 2em; font-weight: bold; }
             .weasel { color: #2c3e50; }
             .white { color: #ecf0f1; background: #2c3e50; padding: 2px 8px; border-radius: 5px; }
             input, button { padding: 12px; font-size: 16px; margin: 5px; }
-            input { width: 50%; border: 2px solid #bdc3c7; border-radius: 5px; }
+            input { width: 45%; border: 2px solid #bdc3c7; border-radius: 5px; }
             button { background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; }
             button:hover { background: #2980b9; }
             button.danger { background: #e74c3c; }
@@ -51,15 +51,21 @@ app.get('/', (req, res) => {
             .ssl-valid { color: #27ae60; font-weight: bold; }
             .ssl-expired { color: #e74c3c; font-weight: bold; }
             .ssl-warning { color: #f39c12; font-weight: bold; }
+            .header-good { color: #27ae60; }
+            .header-missing { color: #e74c3c; }
+            .header-warning { color: #f39c12; }
             pre { background: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 5px; overflow-x: auto; font-size: 13px; }
             .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
             .card { background: #f8f9fa; padding: 10px; border-radius: 5px; border-left: 3px solid #3498db; }
-            .port-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 10px 0; }
-            .port-item { padding: 8px 12px; border-radius: 4px; font-size: 14px; text-align: center; }
+            .port-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin: 10px 0; }
+            .port-item { padding: 8px 12px; border-radius: 4px; font-size: 13px; text-align: center; }
             .port-item.open { background: #fee; color: #c0392b; border: 1px solid #e74c3c; }
             .port-item.closed { background: #e8f8e8; color: #27ae60; border: 1px solid #27ae60; }
             .port-item.filtered { background: #fef9e7; color: #f39c12; border: 1px solid #f39c12; }
+            .tech-tag { display: inline-block; background: #2c3e50; color: white; padding: 4px 12px; border-radius: 20px; margin: 4px; font-size: 13px; }
             .footer { margin-top: 30px; font-size: 12px; color: #7f8c8d; text-align: center; }
+            details { margin: 10px 0; }
+            summary { cursor: pointer; font-weight: bold; color: #2c3e50; }
         </style>
     </head>
     <body>
@@ -74,7 +80,7 @@ app.get('/', (req, res) => {
         <div id="result">
             <p class="loading">Odota skannausta...</p>
         </div>
-        <div class="footer">White Weasel Recon v0.4 — Porttiskannauksella</div>
+        <div class="footer">White Weasel Recon v0.5 — HTTP-headers & Technology Fingerprinting</div>
 
         <script>
         async function scan() {
@@ -124,11 +130,61 @@ app.get('/', (req, res) => {
             } catch (e) {}
         }
 
+        function getHeaderStatus(header, value) {
+            if (!value) return '<span class="header-missing">❌ Puuttuu</span>';
+            if (header === 'strict-transport-security') return '<span class="header-good">✅ ' + value + '</span>';
+            if (header === 'x-frame-options') return '<span class="header-good">✅ ' + value + '</span>';
+            if (header === 'x-content-type-options') return '<span class="header-good">✅ ' + value + '</span>';
+            if (header === 'content-security-policy') return '<span class="header-good">✅ Määritelty</span>';
+            if (header === 'referrer-policy') return '<span class="header-good">✅ ' + value + '</span>';
+            return '<span class="header-warning">⚠️ ' + value + '</span>';
+        }
+
         function formatResult(domain, data) {
             let html = '<h2>📊 Skannaustulokset</h2>';
             html += '<p><strong>🔍 Verkkotunnus:</strong> ' + domain + '</p>';
 
-            // PORTIT (uusi!)
+            // TEKNOLOGIAT (uusi!)
+            if (data.technologies && data.technologies.length > 0) {
+                html += '<h3>🧩 Tunnistetut teknologiat</h3>';
+                html += '<div>';
+                data.technologies.forEach(tech => {
+                    html += '<span class="tech-tag">' + tech + '</span>';
+                });
+                html += '</div>';
+            }
+
+            // HTTP-HEADERS (uusi!)
+            if (data.headers) {
+                html += '<h3>📨 HTTP-otsikot</h3>';
+                const importantHeaders = {
+                    'strict-transport-security': 'HSTS (pakottaa HTTPS:n)',
+                    'x-frame-options': 'Estää kehystämisen (clickjacking)',
+                    'x-content-type-options': 'Estää MIME-tyypin havaitsemisen',
+                    'content-security-policy': 'Content Security Policy (CSP)',
+                    'referrer-policy': 'Ohjaa viitetietojen lähettämistä',
+                    'x-xss-protection': 'XSS-suojaus (vanha)',
+                    'server': 'Palvelinohjelmisto',
+                    'x-powered-by': 'Taustajärjestelmä',
+                    'set-cookie': 'Evästeiden asetukset'
+                };
+                html += '<div class="grid">';
+                for (const [key, label] of Object.entries(importantHeaders)) {
+                    const value = data.headers[key] || null;
+                    html += '<div class="card">';
+                    html += '<strong>' + label + '</strong><br>';
+                    html += getHeaderStatus(key, value);
+                    html += '</div>';
+                }
+                html += '</div>';
+
+                // Kaikki otsikot (laajennettavissa)
+                html += '<details><summary>📋 Kaikki otsikot</summary>';
+                html += '<pre>' + JSON.stringify(data.headers, null, 2) + '</pre>';
+                html += '</details>';
+            }
+
+            // PORTIT
             if (data.ports) {
                 html += '<h3>🚪 Porttiskannaus</h3>';
                 const openPorts = data.ports.filter(p => p.state === 'open');
@@ -146,24 +202,6 @@ app.get('/', (req, res) => {
                         html += '<div class="port-item open"><strong>' + p.port + '</strong><br>' + service + '</div>';
                     });
                     html += '</div>';
-                }
-
-                if (closedPorts.length > 0) {
-                    html += '<details><summary>🟢 Suljetut portit (' + closedPorts.length + ')</summary>';
-                    html += '<div class="port-grid">';
-                    closedPorts.forEach(p => {
-                        html += '<div class="port-item closed">' + p.port + '</div>';
-                    });
-                    html += '</div></details>';
-                }
-
-                if (filteredPorts.length > 0) {
-                    html += '<details><summary>🟡 Suodatetut portit (' + filteredPorts.length + ')</summary>';
-                    html += '<div class="port-grid">';
-                    filteredPorts.forEach(p => {
-                        html += '<div class="port-item filtered">' + p.port + '</div>';
-                    });
-                    html += '</div></details>';
                 }
             }
 
@@ -196,12 +234,6 @@ app.get('/', (req, res) => {
                         html += '<p class="success">✅ Sertifikaatti voimassa ' + days + ' päivää.</p>';
                     }
                 }
-                if (ssl.san && ssl.san.length > 0) {
-                    html += '<div class="card"><strong>Kattaa nämä nimet (SAN):</strong><br>' + ssl.san.join(', ') + '</div>';
-                }
-            } else {
-                html += '<h3>🔒 SSL-sertifikaatti</h3>';
-                html += '<p class="error">❌ SSL-yhteyttä ei voitu muodostaa.</p>';
             }
 
             // WHOIS
@@ -237,27 +269,11 @@ app.get('/', (req, res) => {
 
         function getServiceName(port) {
             const services = {
-                20: 'FTP-data',
-                21: 'FTP',
-                22: 'SSH',
-                23: 'Telnet',
-                25: 'SMTP',
-                53: 'DNS',
-                80: 'HTTP',
-                110: 'POP3',
-                143: 'IMAP',
-                443: 'HTTPS',
-                465: 'SMTPS',
-                587: 'SMTP',
-                993: 'IMAPS',
-                995: 'POP3S',
-                3306: 'MySQL',
-                3389: 'RDP',
-                5432: 'PostgreSQL',
-                6379: 'Redis',
-                8080: 'HTTP-Proxy',
-                8443: 'HTTPS-Alt',
-                27017: 'MongoDB'
+                20: 'FTP-data', 21: 'FTP', 22: 'SSH', 23: 'Telnet', 25: 'SMTP',
+                53: 'DNS', 80: 'HTTP', 110: 'POP3', 143: 'IMAP', 443: 'HTTPS',
+                465: 'SMTPS', 587: 'SMTP', 993: 'IMAPS', 995: 'POP3S',
+                3306: 'MySQL', 3389: 'RDP', 5432: 'PostgreSQL', 6379: 'Redis',
+                8080: 'HTTP-Proxy', 8443: 'HTTPS-Alt', 27017: 'MongoDB'
             };
             return services[port] || 'Tuntematon';
         }
@@ -274,61 +290,40 @@ app.get('/', (req, res) => {
 });
 
 // ============================================
-// 2. PORTTISKANNAUS (uusi!)
+// 2. PORTTISKANNAUS
 // ============================================
 const COMMON_PORTS = [
-    { port: 20, name: 'FTP-data' },
-    { port: 21, name: 'FTP' },
-    { port: 22, name: 'SSH' },
-    { port: 23, name: 'Telnet' },
-    { port: 25, name: 'SMTP' },
-    { port: 53, name: 'DNS' },
-    { port: 80, name: 'HTTP' },
-    { port: 110, name: 'POP3' },
-    { port: 143, name: 'IMAP' },
-    { port: 443, name: 'HTTPS' },
-    { port: 465, name: 'SMTPS' },
-    { port: 587, name: 'SMTP' },
-    { port: 993, name: 'IMAPS' },
-    { port: 995, name: 'POP3S' },
-    { port: 3306, name: 'MySQL' },
-    { port: 3389, name: 'RDP' },
-    { port: 5432, name: 'PostgreSQL' },
-    { port: 6379, name: 'Redis' },
-    { port: 8080, name: 'HTTP-Proxy' },
-    { port: 8443, name: 'HTTPS-Alt' },
-    { port: 27017, name: 'MongoDB' }
+    { port: 20, name: 'FTP-data' }, { port: 21, name: 'FTP' }, { port: 22, name: 'SSH' },
+    { port: 23, name: 'Telnet' }, { port: 25, name: 'SMTP' }, { port: 53, name: 'DNS' },
+    { port: 80, name: 'HTTP' }, { port: 110, name: 'POP3' }, { port: 143, name: 'IMAP' },
+    { port: 443, name: 'HTTPS' }, { port: 465, name: 'SMTPS' }, { port: 587, name: 'SMTP' },
+    { port: 993, name: 'IMAPS' }, { port: 995, name: 'POP3S' }, { port: 3306, name: 'MySQL' },
+    { port: 3389, name: 'RDP' }, { port: 5432, name: 'PostgreSQL' }, { port: 6379, name: 'Redis' },
+    { port: 8080, name: 'HTTP-Proxy' }, { port: 8443, name: 'HTTPS-Alt' }, { port: 27017, name: 'MongoDB' }
 ];
 
 async function checkPort(host, port, timeout = 3000) {
     return new Promise((resolve) => {
         const startTime = Date.now();
         const socket = new net.Socket();
-
         socket.setTimeout(timeout);
-
         socket.on('connect', () => {
             const duration = Date.now() - startTime;
             socket.destroy();
             resolve({ port, state: 'open', duration });
         });
-
         socket.on('timeout', () => {
             socket.destroy();
             resolve({ port, state: 'filtered', duration: timeout });
         });
-
         socket.on('error', (err) => {
             socket.destroy();
             if (err.code === 'ECONNREFUSED') {
                 resolve({ port, state: 'closed', duration: Date.now() - startTime });
-            } else if (err.code === 'ENOTFOUND') {
-                resolve({ port, state: 'error', error: 'Host not found' });
             } else {
                 resolve({ port, state: 'filtered', error: err.code });
             }
         });
-
         socket.connect(port, host);
     });
 }
@@ -336,22 +331,105 @@ async function checkPort(host, port, timeout = 3000) {
 async function scanPorts(host) {
     console.log(`🚪 Skannataan portteja kohteelle ${host}...`);
     const results = [];
-    
     for (const p of COMMON_PORTS) {
         const result = await checkPort(host, p.port);
-        results.push({
-            ...result,
-            name: p.name
-        });
-        // Pieni viive, ettei kuormiteta liikaa
+        results.push({ ...result, name: p.name });
         await new Promise(resolve => setTimeout(resolve, 100));
     }
-
     return results;
 }
 
 // ============================================
-// 3. SSL-TARKISTUS
+// 3. HTTP-HEADERS + TEKNOLOGIAT (uusi!)
+// ============================================
+async function fetchHeaders(domain) {
+    try {
+        const response = await axios.get(`https://${domain}`, {
+            timeout: 10000,
+            maxRedirects: 5,
+            headers: {
+                'User-Agent': 'WhiteWeaselRecon/1.0 (https://whiteweasel.fi)'
+            }
+        });
+        return {
+            headers: response.headers,
+            status: response.status,
+            statusText: response.statusText
+        };
+    } catch (error) {
+        if (error.response) {
+            // Palvelin vastasi (esim. 404, 500)
+            return {
+                headers: error.response.headers || {},
+                status: error.response.status,
+                statusText: error.response.statusText || 'Virhe'
+            };
+        } else if (error.code === 'ENOTFOUND') {
+            return { error: 'Domainia ei löytynyt' };
+        } else {
+            return { error: error.message };
+        }
+    }
+}
+
+function identifyTechnologies(headers, domain) {
+    const technologies = [];
+    
+    // Palvelin
+    if (headers['server']) {
+        const server = headers['server'].toLowerCase();
+        if (server.includes('nginx')) technologies.push('Nginx');
+        else if (server.includes('apache')) technologies.push('Apache');
+        else if (server.includes('iis')) technologies.push('IIS');
+        else if (server.includes('cloudflare')) technologies.push('Cloudflare');
+        else if (server.includes('caddy')) technologies.push('Caddy');
+        else technologies.push('Palvelin: ' + headers['server']);
+    }
+
+    // Taustajärjestelmä
+    if (headers['x-powered-by']) {
+        const powered = headers['x-powered-by'].toLowerCase();
+        if (powered.includes('php')) technologies.push('PHP');
+        else if (powered.includes('asp.net')) technologies.push('ASP.NET');
+        else if (powered.includes('node')) technologies.push('Node.js');
+        else if (powered.includes('python')) technologies.push('Python');
+        else technologies.push('X-Powered-By: ' + headers['x-powered-by']);
+    }
+
+    // CMS-tunnistus
+    if (headers['generator']) {
+        const gen = headers['generator'].toLowerCase();
+        if (gen.includes('wordpress')) technologies.push('WordPress');
+        else if (gen.includes('drupal')) technologies.push('Drupal');
+        else if (gen.includes('joomla')) technologies.push('Joomla');
+        else if (gen.includes('sitecore')) technologies.push('Sitecore');
+        else if (gen.includes('umbraco')) technologies.push('Umbraco');
+        else technologies.push('Generator: ' + headers['generator']);
+    }
+
+    // Evästeet (tunnistaa kirjautumisjärjestelmiä)
+    if (headers['set-cookie']) {
+        const cookies = Array.isArray(headers['set-cookie']) 
+            ? headers['set-cookie'].join(' ') 
+            : headers['set-cookie'];
+        if (cookies.includes('PHPSESSID')) technologies.push('PHP Session');
+        if (cookies.includes('JSESSIONID')) technologies.push('Java Session');
+        if (cookies.includes('ASP.NET_SessionId')) technologies.push('ASP.NET Session');
+        if (cookies.includes('laravel_session')) technologies.push('Laravel PHP');
+        if (cookies.includes('wordpress_logged_in')) technologies.push('WordPress Login');
+    }
+
+    // Turvallisuusheadersit (osoittavat kypsyyttä)
+    if (headers['strict-transport-security']) technologies.push('HSTS');
+    if (headers['content-security-policy']) technologies.push('CSP');
+    if (headers['x-frame-options']) technologies.push('X-Frame-Options');
+    if (headers['x-content-type-options']) technologies.push('X-Content-Type-Options');
+
+    return technologies;
+}
+
+// ============================================
+// 4. SSL-TARKISTUS
 // ============================================
 async function checkSSL(domain) {
     return new Promise((resolve) => {
@@ -366,19 +444,13 @@ async function checkSSL(domain) {
         const req = https.request(options, (res) => {
             const socket = res.socket;
             const cert = socket.getPeerCertificate();
-
             if (!cert || Object.keys(cert).length === 0) {
-                return resolve({
-                    valid: false,
-                    error: 'Ei sertifikaattia'
-                });
+                return resolve({ valid: false, error: 'Ei sertifikaattia' });
             }
-
             const now = new Date();
             const validFrom = new Date(cert.valid_from);
             const validTo = new Date(cert.valid_to);
             const daysRemaining = Math.floor((validTo - now) / (1000 * 60 * 60 * 24));
-
             resolve({
                 valid: true,
                 expired: validTo < now,
@@ -395,32 +467,46 @@ async function checkSSL(domain) {
         });
 
         req.on('error', (err) => {
-            resolve({
-                valid: false,
-                error: err.message
-            });
+            resolve({ valid: false, error: err.message });
         });
-
         req.on('timeout', () => {
             req.destroy();
-            resolve({
-                valid: false,
-                error: 'Aikakatkaisu'
-            });
+            resolve({ valid: false, error: 'Aikakatkaisu' });
         });
-
         req.end();
     });
 }
 
 // ============================================
-// 4. SKANNAUSLOGIIKKA (päivitetty porteilla)
+// 5. SKANNAUSLOGIIKKA (päivitetty)
 // ============================================
 async function performScan(domain) {
-    const result = { domain, whois: null, dns: null, hibp: null, ssl: null, ports: null };
+    const result = { 
+        domain, 
+        whois: null, 
+        dns: null, 
+        hibp: null, 
+        ssl: null, 
+        ports: null,
+        headers: null,      // UUSI
+        technologies: []    // UUSI
+    };
     
     try {
-        // PORTIT (uusi!)
+        // HTTP-HEADERS + TEKNOLOGIAT (uusi!)
+        try {
+            const headerData = await fetchHeaders(domain);
+            if (headerData.error) {
+                result.headers = { error: headerData.error };
+            } else {
+                result.headers = headerData.headers;
+                result.technologies = identifyTechnologies(headerData.headers, domain);
+            }
+        } catch (e) {
+            result.headers = { error: e.message };
+        }
+
+        // PORTIT
         try {
             result.ports = await scanPorts(domain);
         } catch (e) {
@@ -483,7 +569,7 @@ async function performScan(domain) {
 }
 
 // ============================================
-// 5. AUTOMAATTINEN SKANNAUS
+// 6. AUTOMAATTINEN SKANNAUS
 // ============================================
 const TARGET_DOMAINS = [
     'suomi.fi',
@@ -538,7 +624,7 @@ async function runAutoScan() {
         return;
     }
 
-    console.log('🚀 Käynnistetään automaattinen skannaus (portit mukaanlukien)!');
+    console.log('🚀 Käynnistetään automaattinen skannaus (headers + teknologiat)!');
     scanState.status = 'scanning';
     scanState.results = [];
 
@@ -562,7 +648,7 @@ async function runAutoScan() {
 }
 
 // ============================================
-// 6. API-REITIT
+// 7. API-REITIT
 // ============================================
 app.get('/api/scan', async (req, res) => {
     const domain = req.query.domain;
@@ -599,12 +685,13 @@ app.get('/api/results', (req, res) => {
 });
 
 // ============================================
-// 7. KÄYNNISTYS
+// 8. KÄYNNISTYS
 // ============================================
 app.listen(PORT, async () => {
-    console.log(`🦡 White Weasel Recon v0.4 — Porttiskannauksella`);
+    console.log(`🦡 White Weasel Recon v0.5 — HTTP-headers & Technology Fingerprinting`);
     console.log(`📋 ${TARGET_DOMAINS.length} kohdetta listassa`);
-    console.log(`🚪 Skannataan ${COMMON_PORTS.length} yleistä porttia per kohde`);
+    console.log(`🚪 ${COMMON_PORTS.length} porttia skannataan`);
+    console.log(`🧩 Teknologiakartoitus käytössä`);
     await loadResults();
 
     if (AUTO_SCAN_ENABLED) {
