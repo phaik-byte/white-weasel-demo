@@ -77,7 +77,7 @@ app.get('/', (req, res) => {
             if (!domain) { alert('Syötä verkkotunnus!'); return; }
             document.getElementById('result').innerHTML = '<p class="loading">⏳ Skannataan...</p>';
             try {
-                const response = await fetch('/api/scan?domain=' + encodeURIComponent(domain));
+                const response = await fetch(window.location.origin + '/api/scan?domain=' + ...)' + encodeURIComponent(domain));
                 const data = await response.json();
                 document.getElementById('result').innerHTML = formatResult(data);
             } catch (error) {
