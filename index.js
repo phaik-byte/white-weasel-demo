@@ -18,7 +18,7 @@ const uniqueDomains = [...new Set(TARGET_DOMAINS)];
 
 console.log('📋 ' + uniqueDomains.length + ' kohdetta ladattu targets.js:stä');
 
-app.use(express.static('public'));
+// app.use(express.static('public'));
 
 // ============================================
 // 1. KÄYTTÖLIITTYMÄ
