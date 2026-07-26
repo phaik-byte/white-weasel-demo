@@ -10,24 +10,33 @@ const PORT = process.env.PORT || 3000;
 // Ympäristömuuttujat
 const HIBP_API_KEY = process.env.HIBP_API_KEY || 'testaa-ilman-avainta';
 
-// Haetaan kohdelista omasta tiedostostaan
-const { TARGET_DOMAINS } = require('./targets.js');
+// ============================================
+// HAETAAN KOHDELISTA OMISTA TIEDOSTOSTAAN
+// ============================================
+let TARGET_DOMAINS = [];
+try {
+    const targets = require('./targets.js');
+    TARGET_DOMAINS = targets.TARGET_DOMAINS || [];
+    console.log('✅ Kohdelista ladattu targets.js:stä (' + TARGET_DOMAINS.length + ' kohdetta)');
+} catch (error) {
+    console.error('⚠️ targets.js-tiedostoa ei löytynyt, käytetään oletuslistaa');
+    // Oletuslista (jos targets.js puuttuu)
+    TARGET_DOMAINS = [
+        'suomi.fi', 'valtioneuvosto.fi', 'eduskunta.fi',
+        'helsinki.fi', 'tampere.fi', 'turku.fi'
+    ];
+}
 
 // Poistetaan duplikaatit
 const uniqueDomains = [...new Set(TARGET_DOMAINS)];
-
-console.log('📋 ' + uniqueDomains.length + ' kohdetta ladattu targets.js:stä');
-
-// app.use(express.static('public'));
+console.log('📋 ' + uniqueDomains.length + ' kohdetta listassa');
 
 // ============================================
 // 1. KÄYTTÖLIITTYMÄ
 // ============================================
 app.get('/', (req, res) => {
-    // Lähetetään kohdemäärä myös HTML:ään, jotta nappi näyttää oikean luvun
     const targetCount = uniqueDomains.length;
-    res.send(`
-    <!DOCTYPE html>
+    res.send(`<!DOCTYPE html>
     <html>
     <head>
         <title>White Weasel Recon</title>
@@ -43,8 +52,6 @@ app.get('/', (req, res) => {
             button:hover { background: #2980b9; }
             button.danger { background: #e74c3c; }
             button.danger:hover { background: #c0392b; }
-            button.success { background: #27ae60; }
-            button.success:hover { background: #219a52; }
             button.secondary { background: #2c3e50; }
             button.secondary:hover { background: #1a252f; }
             #result { margin-top: 20px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -60,24 +67,8 @@ app.get('/', (req, res) => {
             .card { background: #f8f9fa; padding: 10px; border-radius: 5px; border-left: 3px solid #3498db; }
             .tech-tag { display: inline-block; background: #2c3e50; color: white; padding: 4px 12px; border-radius: 20px; margin: 4px; font-size: 13px; }
             .footer { margin-top: 30px; font-size: 12px; color: #7f8c8d; text-align: center; }
-            details { margin: 10px 0; }
-            summary { cursor: pointer; font-weight: bold; color: #2c3e50; }
-            .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 15px 0; }
-            .stat-card { background: #f8f9fa; padding: 12px; border-radius: 8px; text-align: center; border-left: 4px solid #3498db; }
-            .stat-number { font-size: 24px; font-weight: bold; color: #2c3e50; }
-            .stat-label { color: #7f8c8d; font-size: 13px; }
-            .domain-list { max-height: 400px; overflow-y: auto; font-size: 13px; }
-            .domain-item { padding: 6px 10px; border-bottom: 1px solid #ecf0f1; display: flex; justify-content: space-between; align-items: center; }
-            .domain-item.done { color: #27ae60; }
-            .domain-item.error { color: #e74c3c; }
-            .risk-critical { color: #e74c3c; background: #fde8e8; border-left: 4px solid #e74c3c; }
-            .risk-high { color: #e67e22; background: #fef5e7; border-left: 4px solid #e67e22; }
-            .risk-medium { color: #f39c12; background: #fef9e7; border-left: 4px solid #f39c12; }
-            .risk-low { color: #3498db; background: #ebf5fb; border-left: 4px solid #3498db; }
-            .risk-none { color: #27ae60; background: #eafaf1; border-left: 4px solid #27ae60; }
             .filter-buttons { margin: 15px 0; display: flex; flex-wrap: wrap; gap: 8px; }
-            .filter-btn { padding: 6px 14px; border: 2px solid #bdc3c7; border-radius: 20px; background: white; cursor: pointer; font-size: 13px; transition: all 0.2s; }
-            .filter-btn:hover { transform: scale(1.05); }
+            .filter-btn { padding: 6px 14px; border: 2px solid #bdc3c7; border-radius: 20px; background: white; cursor: pointer; font-size: 13px; }
             .filter-btn.active { border-color: #2c3e50; background: #2c3e50; color: white; }
             .filter-btn.critical { border-color: #e74c3c; color: #e74c3c; }
             .filter-btn.critical.active { background: #e74c3c; color: white; }
@@ -91,6 +82,13 @@ app.get('/', (req, res) => {
             .filter-btn.secure.active { background: #27ae60; color: white; }
             .filter-btn.all { border-color: #2c3e50; color: #2c3e50; }
             .filter-btn.all.active { background: #2c3e50; color: white; }
+            .domain-list { max-height: 400px; overflow-y: auto; font-size: 13px; }
+            .domain-item { padding: 6px 10px; border-bottom: 1px solid #ecf0f1; display: flex; justify-content: space-between; align-items: center; }
+            .risk-critical { color: #e74c3c; background: #fde8e8; border-left: 4px solid #e74c3c; }
+            .risk-high { color: #e67e22; background: #fef5e7; border-left: 4px solid #e67e22; }
+            .risk-medium { color: #f39c12; background: #fef9e7; border-left: 4px solid #f39c12; }
+            .risk-low { color: #3498db; background: #ebf5fb; border-left: 4px solid #3498db; }
+            .risk-none { color: #27ae60; background: #eafaf1; border-left: 4px solid #27ae60; }
             .result-count { margin: 10px 0; font-size: 14px; color: #7f8c8d; }
         </style>
     </head>
@@ -101,25 +99,22 @@ app.get('/', (req, res) => {
         <button onclick="scan()">🔍 Skannaa</button>
         <button onclick="scanBatch()" class="danger">🔄 Skannaa ${targetCount} kohdetta</button>
         <button onclick="showReport()" class="secondary">📊 Raportti</button>
-        <div id="status">
-            <span id="statusText">⏳ Ladataan...</span>
-        </div>
-        <div id="result">
-            <p class="loading">Odota skannausta...</p>
-        </div>
-        <div class="footer">White Weasel Recon v2.4 — Kohdelista omassa tiedostossa</div>
+        <div id="status"><span id="statusText">⏳ Ladataan...</span></div>
+        <div id="result"><p class="loading">Odota skannausta...</p></div>
+        <div class="footer">White Weasel Recon v2.5 — Kohdelista targets.js:stä</div>
 
         <script>
-        let batchStatus = { running: false, total: 0, current: 0, domain: '', results: [] };
-        let currentFilter = 'all';
+        let batchStatus = { running: false };
         let allResults = [];
+        let currentFilter = 'all';
+        const targetCount = ${targetCount};
 
         async function scan() {
             const domain = document.getElementById('domain').value.trim();
             if (!domain) { alert('Syötä verkkotunnus!'); return; }
             document.getElementById('result').innerHTML = '<p class="loading">⏳ Skannataan...</p>';
             try {
-                const response = await fetch(window.location.origin + '/api/scan?domain=' + encodeURIComponent(domain));
+                const response = await fetch('/api/scan?domain=' + encodeURIComponent(domain));
                 const data = await response.json();
                 document.getElementById('result').innerHTML = formatResult(data);
             } catch (error) {
@@ -128,18 +123,14 @@ app.get('/', (req, res) => {
         }
 
         async function scanBatch() {
-            if (batchStatus.running) {
-                alert('Skannaus on jo käynnissä!');
-                return;
-            }
-            if (!confirm('Skannataan ${allResults.length || '?'} kohdetta. Tämä voi kestää 8-12 minuuttia. Jatketaanko?')) return;
+            if (batchStatus.running) { alert('Skannaus on jo käynnissä!'); return; }
+            if (!confirm('Skannataan ' + targetCount + ' kohdetta. Tämä voi kestää 8-12 minuuttia. Jatketaanko?')) return;
             
             document.getElementById('result').innerHTML = '<p class="loading">⏳ Käynnistetään massaskannaus...</p>';
             batchStatus.running = true;
-            allResults = [];
             
             try {
-                const response = await fetch(window.location.origin + '/api/scan-batch', { method: 'POST' });
+                const response = await fetch('/api/scan-batch', { method: 'POST' });
                 const data = await response.json();
                 if (data.error) {
                     document.getElementById('result').innerHTML = '<p class="error">❌ ' + data.error + '</p>';
@@ -157,7 +148,7 @@ app.get('/', (req, res) => {
         async function showReport() {
             document.getElementById('result').innerHTML = '<p class="loading">⏳ Haetaan tuloksia...</p>';
             try {
-                const response = await fetch(window.location.origin + '/api/batch-results');
+                const response = await fetch('/api/batch-results');
                 const data = await response.json();
                 if (data.error) {
                     document.getElementById('result').innerHTML = '<p class="error">❌ ' + data.error + '</p>';
@@ -176,17 +167,13 @@ app.get('/', (req, res) => {
 
         function renderFilteredResults(results, filter) {
             let html = '<h2>📊 Skannaustulokset</h2>';
-            
-            // Suodatinpainikkeet
             html += '<div class="filter-buttons">';
             html += '<button class="filter-btn all active" onclick="applyFilter(\'all\')">📋 Kaikki (' + results.length + ')</button>';
-            
             const critical = results.filter(r => getRiskLevel(r) === 'critical');
             const high = results.filter(r => getRiskLevel(r) === 'high');
             const medium = results.filter(r => getRiskLevel(r) === 'medium');
             const low = results.filter(r => getRiskLevel(r) === 'low');
             const secure = results.filter(r => getRiskLevel(r) === 'secure');
-            
             html += '<button class="filter-btn critical" onclick="applyFilter(\'critical\')">🔴 Kriittinen (' + critical.length + ')</button>';
             html += '<button class="filter-btn high" onclick="applyFilter(\'high\')">🟠 Korkea (' + high.length + ')</button>';
             html += '<button class="filter-btn medium" onclick="applyFilter(\'medium\')">🟡 Keskitaso (' + medium.length + ')</button>';
@@ -194,109 +181,58 @@ app.get('/', (req, res) => {
             html += '<button class="filter-btn secure" onclick="applyFilter(\'secure\')">🟢 Turvallinen (' + secure.length + ')</button>';
             html += '</div>';
 
-            // Suodatetut tulokset
-            let filtered = results;
-            if (filter !== 'all') {
-                filtered = results.filter(r => getRiskLevel(r) === filter);
-            }
-
+            let filtered = filter === 'all' ? results : results.filter(r => getRiskLevel(r) === filter);
             html += '<div class="result-count">Näytetään ' + filtered.length + ' / ' + results.length + ' kohdetta</div>';
-            
             if (filtered.length === 0) {
                 html += '<p class="success">✅ Ei kohteita tällä riskitasolla.</p>';
                 return html;
             }
-
             html += '<div class="domain-list">';
             filtered.forEach((r, i) => {
                 const risk = getRiskLevel(r);
                 const status = r.error ? '❌' : (r.ssl && r.ssl.valid ? '✅' : '⚠️');
                 const issues = getIssues(r);
-                const riskClass = 'risk-' + risk;
-                html += '<div class="domain-item ' + riskClass + '">';
+                html += '<div class="domain-item risk-' + risk + '">';
                 html += '<span><strong>' + (i+1) + '.</strong> ' + status + ' ' + r.domain + '</span>';
-                if (issues.length > 0) {
-                    html += '<span style="font-size:12px;">' + issues.join(', ') + '</span>';
-                }
+                if (issues.length > 0) html += '<span style="font-size:12px;">' + issues.join(', ') + '</span>';
                 html += '</div>';
             });
-            html += '</div>';
-
-            html += '<p><small>' + new Date().toLocaleString('fi-FI') + '</small></p>';
+            html += '</div><p><small>' + new Date().toLocaleString('fi-FI') + '</small></p>';
             return html;
         }
 
         function getRiskLevel(result) {
             if (result.error) return 'critical';
-            
             let risk = 'secure';
-            let hasIssues = false;
-
-            if (result.ssl && !result.ssl.valid) {
-                risk = 'high';
-                hasIssues = true;
-            } else if (result.ssl && result.ssl.daysRemaining < 30) {
-                risk = 'medium';
-                hasIssues = true;
-            }
-
+            if (result.ssl && !result.ssl.valid) risk = 'high';
+            else if (result.ssl && result.ssl.daysRemaining < 30) risk = 'medium';
             if (result.ports) {
                 const riskyPorts = result.ports.filter(p => p.state === 'open' && ![80, 443].includes(p.port));
-                if (riskyPorts.length > 0) {
-                    risk = 'high';
-                    hasIssues = true;
-                }
+                if (riskyPorts.length > 0) risk = 'high';
             }
-
             if (result.headers) {
                 const important = ['strict-transport-security', 'x-frame-options', 'x-content-type-options'];
                 const missing = important.filter(h => !result.headers[h]);
-                if (missing.length >= 3) {
-                    if (risk === 'secure') risk = 'medium';
-                    hasIssues = true;
-                } else if (missing.length > 0 && risk === 'secure') {
-                    risk = 'low';
-                    hasIssues = true;
-                }
+                if (missing.length >= 3 && risk === 'secure') risk = 'medium';
+                else if (missing.length > 0 && risk === 'secure') risk = 'low';
             }
-
-            if (result.headers && result.headers['server'] && result.headers['server'].match(/\d+\.\d+/)) {
-                if (risk === 'secure') risk = 'low';
-                hasIssues = true;
-            }
-
             return risk;
         }
 
         function getIssues(result) {
             const issues = [];
-            
-            if (result.error) {
-                issues.push('Virhe: ' + result.error);
-                return issues;
-            }
-
-            if (result.ssl && !result.ssl.valid) {
-                issues.push('SSL-virhe');
-            } else if (result.ssl && result.ssl.daysRemaining < 30) {
-                issues.push('SSL vanhenee ' + result.ssl.daysRemaining + ' päivässä');
-            }
-
+            if (result.error) { issues.push('Virhe: ' + result.error); return issues; }
+            if (result.ssl && !result.ssl.valid) issues.push('SSL-virhe');
+            else if (result.ssl && result.ssl.daysRemaining < 30) issues.push('SSL vanhenee ' + result.ssl.daysRemaining + ' päivässä');
             if (result.ports) {
                 const riskyPorts = result.ports.filter(p => p.state === 'open' && ![80, 443].includes(p.port));
-                if (riskyPorts.length > 0) {
-                    issues.push('Avoimet portit: ' + riskyPorts.map(p => p.port).join(', '));
-                }
+                if (riskyPorts.length > 0) issues.push('Avoimet portit: ' + riskyPorts.map(p => p.port).join(', '));
             }
-
             if (result.headers) {
                 const important = ['strict-transport-security', 'x-frame-options', 'x-content-type-options'];
                 const missing = important.filter(h => !result.headers[h]);
-                if (missing.length > 0) {
-                    issues.push('Puuttuu: ' + missing.join(', '));
-                }
+                if (missing.length > 0) issues.push('Puuttuu: ' + missing.join(', '));
             }
-
             return issues.slice(0, 3);
         }
 
@@ -311,16 +247,14 @@ app.get('/', (req, res) => {
 
         async function updateBatchStatus() {
             if (!batchStatus.running) return;
-            
             try {
-                const response = await fetch(window.location.origin + '/api/batch-status');
+                const response = await fetch('/api/batch-status');
                 const data = await response.json();
-                
                 const statusText = document.getElementById('statusText');
                 if (data.status === 'idle') {
                     statusText.innerHTML = '🟢 Valmis! Skannattu ' + data.total + ' kohdetta.';
                     batchStatus.running = false;
-                    const res = await fetch(window.location.origin + '/api/batch-results');
+                    const res = await fetch('/api/batch-results');
                     const results = await res.json();
                     if (results.results && results.results.length > 0) {
                         allResults = results.results;
@@ -329,115 +263,65 @@ app.get('/', (req, res) => {
                     return;
                 } else if (data.status === 'scanning') {
                     statusText.innerHTML = '🟡 Skannaus käynnissä... ' + data.currentIndex + '/' + data.total + ': ' + data.currentDomain;
-                } else {
-                    statusText.innerHTML = '⚪ Tila: ' + data.status;
                 }
-                
                 setTimeout(updateBatchStatus, 3000);
-            } catch (e) {
-                setTimeout(updateBatchStatus, 5000);
-            }
+            } catch (e) { setTimeout(updateBatchStatus, 5000); }
         }
 
         function formatResult(data) {
             let html = '<h2>📊 Skannaustulokset</h2>';
             if (data.error) return '<p class="error">❌ ' + data.error + '</p>';
-            
             html += '<p><strong>🔍 Verkkotunnus:</strong> ' + data.domain + '</p>';
-
             if (data.technologies && data.technologies.length > 0) {
                 html += '<h3>🧩 Teknologiat</h3><div>';
-                data.technologies.forEach(t => {
-                    html += '<span class="tech-tag">' + t + '</span>';
-                });
+                data.technologies.forEach(t => { html += '<span class="tech-tag">' + t + '</span>'; });
                 html += '</div>';
             }
-
             if (data.headers) {
-                html += '<h3>🛡️ Turvallisuusheadersit</h3>';
-                const important = ['strict-transport-security', 'x-frame-options', 'x-content-type-options', 'content-security-policy'];
-                html += '<ul>';
-                important.forEach(h => {
+                html += '<h3>🛡️ Turvallisuusheadersit</h3><ul>';
+                ['strict-transport-security', 'x-frame-options', 'x-content-type-options', 'content-security-policy'].forEach(h => {
                     const value = data.headers[h];
-                    if (value) {
-                        html += '<li class="success">✅ ' + h + ': ' + value + '</li>';
-                    } else {
-                        html += '<li class="error">❌ ' + h + ' puuttuu</li>';
-                    }
+                    html += value ? '<li class="success">✅ ' + h + ': ' + value + '</li>' : '<li class="error">❌ ' + h + ' puuttuu</li>';
                 });
                 html += '</ul>';
             }
-
             if (data.ssl) {
                 html += '<h3>🔒 SSL-sertifikaatti</h3>';
                 const ssl = data.ssl;
-                let statusHtml = '';
-                if (ssl.valid && !ssl.expired) {
-                    statusHtml = '<span class="ssl-valid">✅ Voimassa</span>';
-                } else if (ssl.expired) {
-                    statusHtml = '<span class="ssl-expired">❌ VANHENTUNUT!</span>';
-                } else {
-                    statusHtml = '<span class="warning">⚠️ Ongelma</span>';
-                }
+                let statusHtml = ssl.valid && !ssl.expired ? '<span class="ssl-valid">✅ Voimassa</span>' : (ssl.expired ? '<span class="ssl-expired">❌ VANHENTUNUT!</span>' : '<span class="warning">⚠️ Ongelma</span>');
                 html += '<div class="card"><strong>Tila:</strong> ' + statusHtml + '</div>';
-                html += '<div class="grid">';
-                html += '<div class="card"><strong>Myöntäjä:</strong><br>' + (ssl.issuer || 'Ei tiedossa') + '</div>';
-                html += '<div class="card"><strong>Voimassa:</strong><br>' + (ssl.validFrom ? new Date(ssl.validFrom).toLocaleDateString('fi-FI') : '?') + ' → ' + (ssl.validTo ? new Date(ssl.validTo).toLocaleDateString('fi-FI') : '?') + '</div>';
-                html += '</div>';
+                html += '<div class="grid"><div class="card"><strong>Myöntäjä:</strong><br>' + (ssl.issuer || 'Ei tiedossa') + '</div>';
+                html += '<div class="card"><strong>Voimassa:</strong><br>' + (ssl.validFrom ? new Date(ssl.validFrom).toLocaleDateString('fi-FI') : '?') + ' → ' + (ssl.validTo ? new Date(ssl.validTo).toLocaleDateString('fi-FI') : '?') + '</div></div>';
                 if (ssl.daysRemaining !== undefined) {
                     const days = ssl.daysRemaining;
-                    if (days < 0) {
-                        html += '<p class="error">⚠️ Vanhentui ' + Math.abs(days) + ' päivää sitten!</p>';
-                    } else if (days < 30) {
-                        html += '<p class="warning">⚠️ Vanhenee ' + days + ' päivän kuluttua!</p>';
-                    } else {
-                        html += '<p class="success">✅ Voimassa ' + days + ' päivää.</p>';
-                    }
+                    html += days < 0 ? '<p class="error">⚠️ Vanhentui ' + Math.abs(days) + ' päivää sitten!</p>' : (days < 30 ? '<p class="warning">⚠️ Vanhenee ' + days + ' päivän kuluttua!</p>' : '<p class="success">✅ Voimassa ' + days + ' päivää.</p>');
                 }
             }
-
             if (data.ports) {
                 html += '<h3>🚪 Avoimet portit</h3>';
                 const openPorts = data.ports.filter(p => p.state === 'open');
                 if (openPorts.length > 0) {
                     html += '<ul>';
-                    openPorts.forEach(p => {
-                        const service = getServiceName(p.port);
-                        html += '<li class="port-open">' + p.port + ' (' + service + ')</li>';
-                    });
+                    openPorts.forEach(p => { html += '<li class="port-open">' + p.port + ' (' + getServiceName(p.port) + ')</li>'; });
                     html += '</ul>';
                 } else {
                     html += '<p class="success">✅ Ei avoimia portteja</p>';
                 }
             }
-
             if (data.hibp) {
                 html += '<h3>🔐 Tietovuodot (HIBP)</h3>';
-                if (data.hibp.breaches && data.hibp.breaches.length > 0) {
-                    html += '<p class="error">⚠️ ' + data.hibp.breaches.length + ' tietomurtoa!</p>';
-                } else {
-                    html += '<p class="success">✅ Ei tietomurtoja.</p>';
-                }
+                html += (data.hibp.breaches && data.hibp.breaches.length > 0) ? '<p class="error">⚠️ ' + data.hibp.breaches.length + ' tietomurtoa!</p>' : '<p class="success">✅ Ei tietomurtoja.</p>';
             }
-
             html += '<p><small>' + new Date().toLocaleString('fi-FI') + '</small></p>';
             return html;
         }
 
         function getServiceName(port) {
-            const services = {
-                20: 'FTP-data', 21: 'FTP', 22: 'SSH', 23: 'Telnet', 25: 'SMTP',
-                53: 'DNS', 80: 'HTTP', 110: 'POP3', 143: 'IMAP', 443: 'HTTPS',
-                465: 'SMTPS', 587: 'SMTP', 993: 'IMAPS', 995: 'POP3S',
-                3306: 'MySQL', 3389: 'RDP', 5432: 'PostgreSQL', 6379: 'Redis',
-                8080: 'HTTP-Proxy', 8443: 'HTTPS-Alt', 27017: 'MongoDB'
-            };
+            const services = { 20: 'FTP-data', 21: 'FTP', 22: 'SSH', 23: 'Telnet', 25: 'SMTP', 53: 'DNS', 80: 'HTTP', 110: 'POP3', 143: 'IMAP', 443: 'HTTPS', 465: 'SMTPS', 587: 'SMTP', 993: 'IMAPS', 995: 'POP3S', 3306: 'MySQL', 3389: 'RDP', 5432: 'PostgreSQL', 6379: 'Redis', 8080: 'HTTP-Proxy', 8443: 'HTTPS-Alt', 27017: 'MongoDB' };
             return services[port] || 'Tuntematon';
         }
 
-        window.onload = function() {
-            scan();
-        };
+        window.onload = function() { scan(); };
         </script>
     </body>
     </html>
@@ -447,8 +331,6 @@ app.get('/', (req, res) => {
 // ============================================
 // 2. SKANNAUSFUNKTIOT
 // ============================================
-
-// PORTIT
 const COMMON_PORTS = [
     { port: 20, name: 'FTP-data' }, { port: 21, name: 'FTP' }, { port: 22, name: 'SSH' },
     { port: 23, name: 'Telnet' }, { port: 25, name: 'SMTP' }, { port: 53, name: 'DNS' },
@@ -480,7 +362,6 @@ async function scanPorts(host) {
     return results;
 }
 
-// HTTP-HEADERS
 async function fetchHeaders(domain) {
     try {
         const response = await axios.get(`https://${domain}`, { timeout: 10000, maxRedirects: 5 });
@@ -518,126 +399,68 @@ function identifyTechnologies(headers) {
     return techs;
 }
 
-// SSL
 async function checkSSL(domain) {
     return new Promise((resolve) => {
-        const options = {
-            host: domain,
-            port: 443,
-            method: 'HEAD',
-            rejectUnauthorized: false,
-            timeout: 10000
-        };
-
+        const options = { host: domain, port: 443, method: 'HEAD', rejectUnauthorized: false, timeout: 10000 };
         const req = https.request(options, (res) => {
             const socket = res.socket;
             const cert = socket.getPeerCertificate();
-            if (!cert || Object.keys(cert).length === 0) {
-                return resolve({ valid: false, error: 'Ei sertifikaattia' });
-            }
+            if (!cert || Object.keys(cert).length === 0) return resolve({ valid: false, error: 'Ei sertifikaattia' });
             const now = new Date();
             const validFrom = new Date(cert.valid_from);
             const validTo = new Date(cert.valid_to);
             const daysRemaining = Math.floor((validTo - now) / (1000 * 60 * 60 * 24));
-            resolve({
-                valid: true,
-                expired: validTo < now,
-                issuer: cert.issuer?.CN || cert.issuer?.O || 'Tuntematon',
-                validFrom: validFrom.toISOString(),
-                validTo: validTo.toISOString(),
-                daysRemaining: daysRemaining,
-                cipher: socket.getCipher()?.name || 'Ei tiedossa',
-                protocol: socket.getProtocol() || 'Ei tiedossa'
-            });
+            resolve({ valid: true, expired: validTo < now, issuer: cert.issuer?.CN || cert.issuer?.O || 'Tuntematon', validFrom: validFrom.toISOString(), validTo: validTo.toISOString(), daysRemaining });
         });
-
-        req.on('error', (err) => {
-            resolve({ valid: false, error: err.message });
-        });
-        req.on('timeout', () => {
-            req.destroy();
-            resolve({ valid: false, error: 'Aikakatkaisu' });
-        });
+        req.on('error', (err) => resolve({ valid: false, error: err.message }));
+        req.on('timeout', () => { req.destroy(); resolve({ valid: false, error: 'Aikakatkaisu' }); });
         req.end();
     });
 }
 
-// YHDISTETTY SKANNAUS
 async function performScan(domain) {
     const result = { domain, timestamp: new Date().toISOString() };
     try {
         const headerData = await fetchHeaders(domain);
-        if (headerData.error) {
-            result.error = headerData.error;
-            return result;
-        }
+        if (headerData.error) { result.error = headerData.error; return result; }
         result.headers = headerData.headers;
         result.technologies = identifyTechnologies(headerData.headers);
         result.ssl = await checkSSL(domain);
         result.ports = await scanPorts(domain);
-
         if (HIBP_API_KEY && HIBP_API_KEY !== 'testaa-ilman-avainta') {
             try {
-                const hibpResponse = await axios.get(
-                    `https://haveibeenpwned.com/api/v3/breachedaccount/${encodeURIComponent(domain)}?truncateResponse=true`,
-                    {
-                        headers: {
-                            'hibp-api-key': HIBP_API_KEY,
-                            'User-Agent': 'WhiteWeaselRecon/1.0 (https://whiteweasel.fi)'
-                        }
-                    }
-                );
+                const hibpResponse = await axios.get(`https://haveibeenpwned.com/api/v3/breachedaccount/${encodeURIComponent(domain)}?truncateResponse=true`, { headers: { 'hibp-api-key': HIBP_API_KEY, 'User-Agent': 'WhiteWeaselRecon/1.0' } });
                 result.hibp = { breaches: hibpResponse.data || [] };
             } catch (e) {
-                if (e.response && e.response.status === 404) {
-                    result.hibp = { breaches: [] };
-                } else {
-                    result.hibp = { error: e.message };
-                }
+                result.hibp = { breaches: [] };
             }
         } else {
             result.hibp = { message: 'HIBP ei käytössä' };
         }
-    } catch (e) {
-        result.error = e.message;
-    }
+    } catch (e) { result.error = e.message; }
     return result;
 }
 
 // ============================================
 // 3. MASSASKANNAUS
 // ============================================
-let batchState = {
-    status: 'idle',
-    currentIndex: 0,
-    total: uniqueDomains.length,
-    currentDomain: '',
-    results: [],
-    lastScan: null
-};
+let batchState = { status: 'idle', currentIndex: 0, total: uniqueDomains.length, currentDomain: '', results: [], lastScan: null };
 
 async function runBatchScan() {
-    if (batchState.status === 'scanning') {
-        console.log('⏳ Skannaus jo käynnissä');
-        return;
-    }
-
+    if (batchState.status === 'scanning') return;
     console.log('🚀 Käynnistetään massaskannaus (' + uniqueDomains.length + ' kohdetta)...');
     batchState.status = 'scanning';
     batchState.results = [];
     batchState.currentIndex = 0;
-
     for (let i = 0; i < uniqueDomains.length; i++) {
         const domain = uniqueDomains[i];
         batchState.currentIndex = i + 1;
         batchState.currentDomain = domain;
         console.log('🦡 [' + (i+1) + '/' + uniqueDomains.length + '] Skannataan: ' + domain);
-
         const result = await performScan(domain);
         batchState.results.push(result);
         await new Promise(resolve => setTimeout(resolve, 300));
     }
-
     batchState.status = 'idle';
     batchState.lastScan = new Date().toISOString();
     batchState.currentDomain = '';
@@ -647,56 +470,30 @@ async function runBatchScan() {
 // ============================================
 // 4. API-REITIT
 // ============================================
-
 app.get('/api/scan', async (req, res) => {
     const domain = req.query.domain;
-    if (!domain) {
-        return res.status(400).json({ error: 'Domain puuttuu' });
-    }
-    try {
-        const result = await performScan(domain);
-        res.json(result);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+    if (!domain) return res.status(400).json({ error: 'Domain puuttuu' });
+    try { res.json(await performScan(domain)); } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
 app.post('/api/scan-batch', async (req, res) => {
-    if (batchState.status === 'scanning') {
-        return res.status(409).json({ error: 'Skannaus jo käynnissä!' });
-    }
+    if (batchState.status === 'scanning') return res.status(409).json({ error: 'Skannaus jo käynnissä!' });
     runBatchScan().catch(console.error);
-    res.json({ message: 'Massaskannaus käynnistetty! Seuraa edistymistä.' });
+    res.json({ message: 'Massaskannaus käynnistetty! Seuraa edistymistä tilapalkista.' });
 });
 
 app.get('/api/batch-status', (req, res) => {
-    res.json({
-        status: batchState.status,
-        currentIndex: batchState.currentIndex,
-        total: batchState.total,
-        currentDomain: batchState.currentDomain,
-        lastScan: batchState.lastScan,
-        resultsCount: batchState.results.length
-    });
+    res.json({ status: batchState.status, currentIndex: batchState.currentIndex, total: batchState.total, currentDomain: batchState.currentDomain, lastScan: batchState.lastScan, resultsCount: batchState.results.length });
 });
 
 app.get('/api/batch-results', (req, res) => {
-    if (batchState.results.length === 0) {
-        return res.status(404).json({ error: 'Ei skannattuja kohteita. Suorita ensin massaskannaus.' });
-    }
-    res.json({
-        results: batchState.results,
-        total: batchState.results.length,
-        timestamp: new Date().toISOString()
-    });
+    if (batchState.results.length === 0) return res.status(404).json({ error: 'Ei skannattuja kohteita. Suorita ensin massaskannaus.' });
+    res.json({ results: batchState.results, total: batchState.results.length, timestamp: new Date().toISOString() });
 });
 
 // ============================================
 // 5. KÄYNNISTYS
 // ============================================
 app.listen(PORT, () => {
-    console.log('🦡 White Weasel Recon v2.4 — Kohdelista omassa tiedostossa');
-    console.log('✅ Palvelin käynnissä portissa ' + PORT);
-    console.log('📋 ' + uniqueDomains.length + ' kohdetta ladattu targets.js:stä');
-    console.log('📝 Muokkaa targets.js-tiedostoa muuttaaksesi kohdelistaa');
-});
+    console.log('🦡 White Weasel Recon v2.5');
+    console.log('✅ Palvelin käynnissä portissa ' + PORT
