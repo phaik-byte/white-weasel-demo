@@ -623,4 +623,63 @@ async function runBatchScan() {
 app.get('/api/scan', async (req, res) => {
     const domain = req.query.domain;
     if (!domain) return res.status(400).json({ error: 'Domain puuttuu' });
-    try
+    try {
+        const result = await performScan(domain);
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/scan-batch', async (req, res) => {
+    if (scanState.status === 'scanning') {
+        return res.status(409).json({ message: 'Skannaus jo käynnissä!' });
+    }
+    runBatchScan().catch(console.error);
+    res.json({ message: 'Massaskannaus käynnistetty!' });
+});
+
+app.get('/api/status', (req, res) => {
+    res.json({
+        status: scanState.status,
+        currentIndex: scanState.currentIndex,
+        total: scanState.total,
+        currentDomain: scanState.currentDomain,
+        lastScan: scanState.lastScan,
+        resultsCount: scanState.results.length
+    });
+});
+
+app.get('/api/report', (req, res) => {
+    if (scanState.results.length === 0) {
+        return res.status(404).json({ error: 'Ei skannattuja kohteita. Suorita ensin skannaus.' });
+    }
+    const report = generateReportData(scanState.results);
+    res.json(report);
+});
+
+app.get('/api/report/download', async (req, res) => {
+    if (scanState.results.length === 0) {
+        return res.status(404).json({ error: 'Ei skannattuja kohteita.' });
+    }
+    const report = generateReportData(scanState.results);
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename=white-weasel-report-${new Date().toISOString().slice(0,10)}.json`);
+    res.json(report);
+});
+
+// ============================================
+// 6. KÄYNNISTYS
+// ============================================
+app.listen(PORT, async () => {
+    console.log(`🦡 White Weasel Recon v0.6 — Massaskannaus ja raportointi`);
+    console.log(`📋 ${TARGET_DOMAINS.length} kohdetta listassa`);
+    await loadResults();
+
+    if (AUTO_SCAN_ENABLED) {
+        console.log('⏳ Ensimmäinen massaskannaus 30 sekunnin kuluttua...');
+        setTimeout(() => runBatchScan().catch(console.error), 30000);
+        setInterval(() => runBatchScan().catch(console.error), SCAN_INTERVAL);
+        console.log(`⏰ Skannausväli: ${SCAN_INTERVAL/3600000} tuntia`);
+    }
+});
