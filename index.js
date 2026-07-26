@@ -674,6 +674,7 @@ app.get('/api/report/download', async (req, res) => {
 app.listen(PORT, async () => {
     console.log(`🦡 White Weasel Recon v0.6 — Massaskannaus ja raportointi`);
     console.log(`📋 ${TARGET_DOMAINS.length} kohdetta listassa`);
+    console.log(`✅ Palvelin kuuntelee portissa ${PORT}`);
     await loadResults();
 
     if (AUTO_SCAN_ENABLED) {
