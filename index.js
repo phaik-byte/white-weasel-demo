@@ -22,17 +22,21 @@ app.get('/', (req, res) => {
     <head>
         <title>White Weasel Recon</title>
         <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 1100px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
             h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
             .logo { font-size: 2em; font-weight: bold; }
             .weasel { color: #2c3e50; }
             .white { color: #ecf0f1; background: #2c3e50; padding: 2px 8px; border-radius: 5px; }
             input, button { padding: 12px; font-size: 16px; margin: 5px; }
-            input { width: 40%; border: 2px solid #bdc3c7; border-radius: 5px; }
+            input { width: 35%; border: 2px solid #bdc3c7; border-radius: 5px; }
             button { background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; }
             button:hover { background: #2980b9; }
             button.danger { background: #e74c3c; }
             button.danger:hover { background: #c0392b; }
+            button.success { background: #27ae60; }
+            button.success:hover { background: #219a52; }
+            button.secondary { background: #2c3e50; }
+            button.secondary:hover { background: #1a252f; }
             #result { margin-top: 20px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
             #status { margin-top: 10px; padding: 10px; background: #e8f4f8; border-radius: 5px; border-left: 4px solid #3498db; }
             .loading { color: #3498db; font-style: italic; }
@@ -52,17 +56,32 @@ app.get('/', (req, res) => {
             .stat-card { background: #f8f9fa; padding: 12px; border-radius: 8px; text-align: center; border-left: 4px solid #3498db; }
             .stat-number { font-size: 24px; font-weight: bold; color: #2c3e50; }
             .stat-label { color: #7f8c8d; font-size: 13px; }
-            .domain-list { max-height: 300px; overflow-y: auto; font-size: 13px; }
-            .domain-item { padding: 4px 8px; border-bottom: 1px solid #ecf0f1; }
+            .domain-list { max-height: 400px; overflow-y: auto; font-size: 13px; }
+            .domain-item { padding: 6px 10px; border-bottom: 1px solid #ecf0f1; display: flex; justify-content: space-between; align-items: center; }
             .domain-item.done { color: #27ae60; }
             .domain-item.error { color: #e74c3c; }
-            .risk-critical { color: #e74c3c; }
-            .risk-high { color: #e67e22; }
-            .risk-medium { color: #f39c12; }
-            .risk-low { color: #3498db; }
-            .risk-none { color: #27ae60; }
-            button.secondary { background: #2c3e50; }
-            button.secondary:hover { background: #1a252f; }
+            .risk-critical { color: #e74c3c; background: #fde8e8; border-left: 4px solid #e74c3c; }
+            .risk-high { color: #e67e22; background: #fef5e7; border-left: 4px solid #e67e22; }
+            .risk-medium { color: #f39c12; background: #fef9e7; border-left: 4px solid #f39c12; }
+            .risk-low { color: #3498db; background: #ebf5fb; border-left: 4px solid #3498db; }
+            .risk-none { color: #27ae60; background: #eafaf1; border-left: 4px solid #27ae60; }
+            .filter-buttons { margin: 15px 0; display: flex; flex-wrap: wrap; gap: 8px; }
+            .filter-btn { padding: 6px 14px; border: 2px solid #bdc3c7; border-radius: 20px; background: white; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+            .filter-btn:hover { transform: scale(1.05); }
+            .filter-btn.active { border-color: #2c3e50; background: #2c3e50; color: white; }
+            .filter-btn.critical { border-color: #e74c3c; color: #e74c3c; }
+            .filter-btn.critical.active { background: #e74c3c; color: white; }
+            .filter-btn.high { border-color: #e67e22; color: #e67e22; }
+            .filter-btn.high.active { background: #e67e22; color: white; }
+            .filter-btn.medium { border-color: #f39c12; color: #f39c12; }
+            .filter-btn.medium.active { background: #f39c12; color: white; }
+            .filter-btn.low { border-color: #3498db; color: #3498db; }
+            .filter-btn.low.active { background: #3498db; color: white; }
+            .filter-btn.secure { border-color: #27ae60; color: #27ae60; }
+            .filter-btn.secure.active { background: #27ae60; color: white; }
+            .filter-btn.all { border-color: #2c3e50; color: #2c3e50; }
+            .filter-btn.all.active { background: #2c3e50; color: white; }
+            .result-count { margin: 10px 0; font-size: 14px; color: #7f8c8d; }
         </style>
     </head>
     <body>
@@ -70,7 +89,7 @@ app.get('/', (req, res) => {
         <p>Syötä verkkotunnus (esim. <strong>suomi.fi</strong>)</p>
         <input type="text" id="domain" placeholder="esim. suomi.fi" value="suomi.fi">
         <button onclick="scan()">🔍 Skannaa</button>
-        <button onclick="scanBatch()" class="danger">🔄 Skannaa 100 kohdetta</button>
+        <button onclick="scanBatch()" class="danger">🔄 Skannaa 40 kohdetta</button>
         <button onclick="showReport()" class="secondary">📊 Raportti</button>
         <div id="status">
             <span id="statusText">⏳ Ladataan...</span>
@@ -78,10 +97,12 @@ app.get('/', (req, res) => {
         <div id="result">
             <p class="loading">Odota skannausta...</p>
         </div>
-        <div class="footer">White Weasel Recon v2.2 — 100 kohdetta + raportti</div>
+        <div class="footer">White Weasel Recon v2.3 — 40 kohdetta + suodatus</div>
 
         <script>
         let batchStatus = { running: false, total: 0, current: 0, domain: '', results: [] };
+        let currentFilter = 'all';
+        let allResults = [];
 
         async function scan() {
             const domain = document.getElementById('domain').value.trim();
@@ -101,10 +122,11 @@ app.get('/', (req, res) => {
                 alert('Skannaus on jo käynnissä!');
                 return;
             }
-            if (!confirm('Skannataan 100 satunnaista .fi-domainia. Tämä voi kestää 15-25 minuuttia. Jatketaanko?')) return;
+            if (!confirm('Skannataan 40 satunnaista .fi-domainia. Tämä voi kestää 8-12 minuuttia. Jatketaanko?')) return;
             
             document.getElementById('result').innerHTML = '<p class="loading">⏳ Käynnistetään massaskannaus...</p>';
             batchStatus.running = true;
+            allResults = [];
             
             try {
                 const response = await fetch('/api/scan-batch', { method: 'POST' });
@@ -123,18 +145,162 @@ app.get('/', (req, res) => {
         }
 
         async function showReport() {
-            document.getElementById('result').innerHTML = '<p class="loading">⏳ Luodaan raporttia...</p>';
+            document.getElementById('result').innerHTML = '<p class="loading">⏳ Haetaan tuloksia...</p>';
             try {
-                const response = await fetch('/api/report');
+                const response = await fetch('/api/batch-results');
                 const data = await response.json();
                 if (data.error) {
                     document.getElementById('result').innerHTML = '<p class="error">❌ ' + data.error + '</p>';
                     return;
                 }
-                document.getElementById('result').innerHTML = formatReport(data);
+                if (!data.results || data.results.length === 0) {
+                    document.getElementById('result').innerHTML = '<p class="warning">⚠️ Ei skannattuja kohteita. Suorita ensin massaskannaus.</p>';
+                    return;
+                }
+                allResults = data.results;
+                document.getElementById('result').innerHTML = renderFilteredResults(allResults, 'all');
             } catch (error) {
                 document.getElementById('result').innerHTML = '<p class="error">❌ Virhe: ' + error.message + '</p>';
             }
+        }
+
+        function renderFilteredResults(results, filter) {
+            let html = '<h2>📊 Skannaustulokset</h2>';
+            
+            // Suodatinpainikkeet
+            html += '<div class="filter-buttons">';
+            html += '<button class="filter-btn all active" onclick="applyFilter(\'all\')">📋 Kaikki (' + results.length + ')</button>';
+            
+            const critical = results.filter(r => getRiskLevel(r) === 'critical');
+            const high = results.filter(r => getRiskLevel(r) === 'high');
+            const medium = results.filter(r => getRiskLevel(r) === 'medium');
+            const low = results.filter(r => getRiskLevel(r) === 'low');
+            const secure = results.filter(r => getRiskLevel(r) === 'secure');
+            
+            html += '<button class="filter-btn critical" onclick="applyFilter(\'critical\')">🔴 Kriittinen (' + critical.length + ')</button>';
+            html += '<button class="filter-btn high" onclick="applyFilter(\'high\')">🟠 Korkea (' + high.length + ')</button>';
+            html += '<button class="filter-btn medium" onclick="applyFilter(\'medium\')">🟡 Keskitaso (' + medium.length + ')</button>';
+            html += '<button class="filter-btn low" onclick="applyFilter(\'low\')">🔵 Matala (' + low.length + ')</button>';
+            html += '<button class="filter-btn secure" onclick="applyFilter(\'secure\')">🟢 Turvallinen (' + secure.length + ')</button>';
+            html += '</div>';
+
+            // Suodatetut tulokset
+            let filtered = results;
+            if (filter !== 'all') {
+                filtered = results.filter(r => getRiskLevel(r) === filter);
+            }
+
+            html += '<div class="result-count">Näytetään ' + filtered.length + ' / ' + results.length + ' kohdetta</div>';
+            
+            if (filtered.length === 0) {
+                html += '<p class="success">✅ Ei kohteita tällä riskitasolla.</p>';
+                return html;
+            }
+
+            html += '<div class="domain-list">';
+            filtered.forEach((r, i) => {
+                const risk = getRiskLevel(r);
+                const status = r.error ? '❌' : (r.ssl && r.ssl.valid ? '✅' : '⚠️');
+                const issues = getIssues(r);
+                const riskClass = 'risk-' + risk;
+                html += '<div class="domain-item ' + riskClass + '">';
+                html += '<span><strong>' + (i+1) + '.</strong> ' + status + ' ' + r.domain + '</span>';
+                if (issues.length > 0) {
+                    html += '<span style="font-size:12px;">' + issues.join(', ') + '</span>';
+                }
+                html += '</div>';
+            });
+            html += '</div>';
+
+            html += '<p><small>' + new Date().toLocaleString('fi-FI') + '</small></p>';
+            return html;
+        }
+
+        function getRiskLevel(result) {
+            if (result.error) return 'critical';
+            
+            let risk = 'secure';
+            let hasIssues = false;
+
+            // SSL-ongelmat
+            if (result.ssl && !result.ssl.valid) {
+                risk = 'high';
+                hasIssues = true;
+            } else if (result.ssl && result.ssl.daysRemaining < 30) {
+                risk = 'medium';
+                hasIssues = true;
+            }
+
+            // Avoimet portit (muut kuin 80, 443)
+            if (result.ports) {
+                const riskyPorts = result.ports.filter(p => p.state === 'open' && ![80, 443].includes(p.port));
+                if (riskyPorts.length > 0) {
+                    risk = 'high';
+                    hasIssues = true;
+                }
+            }
+
+            // Puuttuvat turvallisuusheadersit
+            if (result.headers) {
+                const important = ['strict-transport-security', 'x-frame-options', 'x-content-type-options'];
+                const missing = important.filter(h => !result.headers[h]);
+                if (missing.length >= 3) {
+                    if (risk === 'secure') risk = 'medium';
+                    hasIssues = true;
+                } else if (missing.length > 0 && risk === 'secure') {
+                    risk = 'low';
+                    hasIssues = true;
+                }
+            }
+
+            // Palvelinversion paljastuminen
+            if (result.headers && result.headers['server'] && result.headers['server'].match(/\d+\.\d+/)) {
+                if (risk === 'secure') risk = 'low';
+                hasIssues = true;
+            }
+
+            return risk;
+        }
+
+        function getIssues(result) {
+            const issues = [];
+            
+            if (result.error) {
+                issues.push('Virhe: ' + result.error);
+                return issues;
+            }
+
+            if (result.ssl && !result.ssl.valid) {
+                issues.push('SSL-virhe');
+            } else if (result.ssl && result.ssl.daysRemaining < 30) {
+                issues.push('SSL vanhenee ' + result.ssl.daysRemaining + ' päivässä');
+            }
+
+            if (result.ports) {
+                const riskyPorts = result.ports.filter(p => p.state === 'open' && ![80, 443].includes(p.port));
+                if (riskyPorts.length > 0) {
+                    issues.push('Avoimet portit: ' + riskyPorts.map(p => p.port).join(', '));
+                }
+            }
+
+            if (result.headers) {
+                const important = ['strict-transport-security', 'x-frame-options', 'x-content-type-options'];
+                const missing = important.filter(h => !result.headers[h]);
+                if (missing.length > 0) {
+                    issues.push('Puuttuu: ' + missing.join(', '));
+                }
+            }
+
+            return issues.slice(0, 3);
+        }
+
+        function applyFilter(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.classList.contains(filter)) btn.classList.add('active');
+            });
+            document.getElementById('result').innerHTML = renderFilteredResults(allResults, filter);
         }
 
         async function updateBatchStatus() {
@@ -148,6 +314,13 @@ app.get('/', (req, res) => {
                 if (data.status === 'idle') {
                     statusText.innerHTML = '🟢 Valmis! Skannattu ' + data.total + ' kohdetta.';
                     batchStatus.running = false;
+                    // Hae tulokset automaattisesti
+                    const res = await fetch('/api/batch-results');
+                    const results = await res.json();
+                    if (results.results && results.results.length > 0) {
+                        allResults = results.results;
+                        document.getElementById('result').innerHTML = renderFilteredResults(allResults, 'all');
+                    }
                     return;
                 } else if (data.status === 'scanning') {
                     statusText.innerHTML = '🟡 Skannaus käynnissä... ' + data.currentIndex + '/' + data.total + ': ' + data.currentDomain;
@@ -246,71 +419,6 @@ app.get('/', (req, res) => {
             return html;
         }
 
-        function formatReport(data) {
-            let html = '<h2>📊 White Weasel - Raportti</h2>';
-            html += '<p><strong>Skannausajankohta:</strong> ' + new Date(data.timestamp).toLocaleString('fi-FI') + '</p>';
-            html += '<p><strong>Skannattuja kohteita:</strong> ' + data.totalScanned + '</p>';
-
-            html += '<h3>📈 Yhteenveto</h3>';
-            html += '<div class="stat-grid">';
-            html += '<div class="stat-card"><div class="stat-number">' + data.summary.total + '</div><div class="stat-label">Skannatut kohteet</div></div>';
-            html += '<div class="stat-card" style="border-left-color:#e74c3c;"><div class="stat-number">' + data.summary.critical + '</div><div class="stat-label">Kriittiset riskit</div></div>';
-            html += '<div class="stat-card" style="border-left-color:#e67e22;"><div class="stat-number">' + data.summary.high + '</div><div class="stat-label">Korkeat riskit</div></div>';
-            html += '<div class="stat-card" style="border-left-color:#f39c12;"><div class="stat-number">' + data.summary.medium + '</div><div class="stat-label">Keskitasoiset riskit</div></div>';
-            html += '<div class="stat-card" style="border-left-color:#3498db;"><div class="stat-number">' + data.summary.low + '</div><div class="stat-label">Matalat riskit</div></div>';
-            html += '<div class="stat-card" style="border-left-color:#27ae60;"><div class="stat-number">' + data.summary.secure + '</div><div class="stat-label">Turvalliset</div></div>';
-            html += '</div>';
-
-            // Yleisimmät teknologiat
-            if (data.topTechnologies && data.topTechnologies.length > 0) {
-                html += '<h3>🧩 Yleisimmät teknologiat</h3><ul>';
-                data.topTechnologies.forEach(t => {
-                    html += '<li><strong>' + t.name + '</strong>: ' + t.count + ' kohdetta (' + t.percentage + '%)</li>';
-                });
-                html += '</ul>';
-            }
-
-            // Puuttuvat headersit
-            if (data.missingHeaders && data.missingHeaders.length > 0) {
-                html += '<h3>🛡️ Yleisimmin puuttuvat turvallisuusheadersit</h3><ul>';
-                data.missingHeaders.forEach(h => {
-                    html += '<li><strong>' + h.name + '</strong>: puuttuu ' + h.count + ' kohteelta (' + h.percentage + '%)</li>';
-                });
-                html += '</ul>';
-            }
-
-            // Avoimet portit
-            if (data.openPorts && data.openPorts.length > 0) {
-                html += '<h3>🚪 Yleisimmät avoimet portit</h3><ul>';
-                data.openPorts.forEach(p => {
-                    html += '<li><strong>Portti ' + p.port + '</strong> (' + p.name + '): auki ' + p.count + ' kohteella (' + p.percentage + '%)</li>';
-                });
-                html += '</ul>';
-            }
-
-            // Huomioitavaa
-            if (data.observations && data.observations.length > 0) {
-                html += '<h3>💡 Huomioitavaa</h3><ul>';
-                data.observations.forEach(o => {
-                    html += '<li>' + o + '</li>';
-                });
-                html += '</ul>';
-            }
-
-            // Suositukset
-            if (data.recommendations && data.recommendations.length > 0) {
-                html += '<h3>🎯 Suositukset</h3><ul>';
-                data.recommendations.forEach(r => {
-                    html += '<li><strong>' + r.priority + ':</strong> ' + r.text + '</li>';
-                });
-                html += '</ul>';
-            }
-
-            html += '<p><small>Raportti luotu: ' + new Date().toLocaleString('fi-FI') + '</small></p>';
-            html += '<button onclick="downloadReport()">📥 Lataa raportti (JSON)</button>';
-            return html;
-        }
-
         function getServiceName(port) {
             const services = {
                 20: 'FTP-data', 21: 'FTP', 22: 'SSH', 23: 'Telnet', 25: 'SMTP',
@@ -332,57 +440,46 @@ app.get('/', (req, res) => {
 });
 
 // ============================================
-// 2. 100 PIENEN YRITYKSEN .fi-DOMAINIA
+// 2. 40 PIENEN YRITYKSEN .fi-DOMAINIA
 // ============================================
 const TARGET_DOMAINS = [
     // Ravintolat ja kahvilat
     'ravintola.fi', 'kahvila.fi', 'ravintolakoti.fi', 'lounasravintola.fi',
-    'konditoria.fi', 'leipomo.fi', 'pizzeria.fi', 'grilli.fi', 'kebab.fi',
+    'konditoria.fi', 'leipomo.fi', 'pizzeria.fi', 'grilli.fi',
     
     // Kauneus ja hyvinvointi
     'parturi.fi', 'kampaamo.fi', 'hieroja.fi', 'fysioterapia.fi',
-    'kosmetologi.fi', 'tatuointi.fi', 'kuntosali.fi', 'jooga.fi',
+    'kosmetologi.fi', 'kuntosali.fi',
     
     // Rakentaminen ja remontti
-    'rakennus.fi', 'remontti.fi', 'maalarit.fi', 'sahaus.fi', 'lvi.fi',
-    'sahkotyo.fi', 'puusepat.fi', 'lattianhoito.fi', 'kattoremontti.fi',
+    'rakennus.fi', 'remontti.fi', 'maalarit.fi', 'lvi.fi',
+    'sahkotyo.fi', 'lattianhoito.fi',
     
     // Kiinteistöt ja asuminen
-    'kiinteisto.fi', 'asunto.fi', 'vuokraus.fi', 'isannointi.fi',
-    'talonrakennus.fi', 'arkkitehti.fi', 'sisustus.fi',
+    'kiinteisto.fi', 'asunto.fi', 'vuokraus.fi', 'sisustus.fi',
     
     // Kuljetus ja logistiikka
     'kuljetus.fi', 'logistiikka.fi', 'muutto.fi', 'taksi.fi',
-    'jakelu.fi', 'varastointi.fi', 'konevuokraus.fi',
     
     // Tietotekniikka ja digi
     'it-palvelut.fi', 'verkkosivut.fi', 'digimarkkinointi.fi',
-    'ohjelmointi.fi', 'tietoturva.fi', 'pilvipalvelut.fi',
+    'ohjelmointi.fi', 'tietoturva.fi',
     
     // Koulutus ja konsultointi
-    'koulutus.fi', 'konsultointi.fi', 'valmennus.fi', 'tutor.fi',
-    'kielikoulu.fi', 'musiikkiopisto.fi', 'tanssikoulu.fi',
+    'koulutus.fi', 'konsultointi.fi', 'valmennus.fi', 'kielikoulu.fi',
     
     // Terveys ja hyvinvointi
-    'hammaslaakari.fi', 'optikko.fi', 'apteekki.fi', 'labratutkimus.fi',
-    'psykoterapia.fi', 'puheterapia.fi', 'ravitsemus.fi',
+    'optikko.fi', 'apteekki.fi', 'ravitsemus.fi',
     
     // Kauppa ja verkkokauppa
-    'verkkokauppa.fi', 'k-rauta.fi', 'puutarha.fi', 'kukkakauppa.fi',
-    'urheilukauppa.fi', 'kengat.fi', 'laukut.fi', 'kellot.fi',
+    'verkkokauppa.fi', 'puutarha.fi', 'kukkakauppa.fi',
     
     // Auto ja liikenne
-    'autokorjaamo.fi', 'renkaat.fi', 'varaosat.fi', 'autopesu.fi',
-    'autokoulu.fi', 'huoltoasema.fi', 'renkaanvaihto.fi',
-    
-    // Muut
-    'siivous.fi', 'pesula.fi', 'lukkosepat.fi', 'turvapalvelut.fi',
-    'jatekierratys.fi', 'valokuvaus.fi', 'graafinen.fi', 'mainostoimisto.fi',
-    'pr-toimisto.fi', 'tapahtumat.fi', 'viihde.fi', 'musiikki.fi'
+    'autokorjaamo.fi', 'renkaat.fi', 'varaosat.fi'
 ];
 
-// Poistetaan duplikaatit ja otetaan 100 ensimmäistä
-const uniqueDomains = [...new Set(TARGET_DOMAINS)].slice(0, 100);
+// Poistetaan duplikaatit ja otetaan 40 ensimmäistä
+const uniqueDomains = [...new Set(TARGET_DOMAINS)].slice(0, 40);
 
 console.log('📋 ' + uniqueDomains.length + ' kohdetta listassa');
 
@@ -520,7 +617,7 @@ async function performScan(domain) {
         // SSL
         result.ssl = await checkSSL(domain);
         
-        // Portit (kaikki)
+        // Portit
         result.ports = await scanPorts(domain);
 
         // HIBP
@@ -593,165 +690,7 @@ async function runBatchScan() {
 }
 
 // ============================================
-// 5. RAPORTOINTI
-// ============================================
-function analyzeRisks(results) {
-    const findings = [];
-    let critical = 0, high = 0, medium = 0, low = 0, secure = 0;
-
-    results.forEach(r => {
-        let riskLevel = 'secure';
-        const issues = [];
-
-        // SSL
-        if (r.ssl && !r.ssl.valid) {
-            issues.push('SSL-sertifikaatti virheellinen');
-            riskLevel = 'high';
-        } else if (r.ssl && r.ssl.daysRemaining < 30) {
-            issues.push('SSL-sertifikaatti vanhenee ' + r.ssl.daysRemaining + ' päivän kuluttua');
-            if (riskLevel === 'secure') riskLevel = 'medium';
-        }
-
-        // Turvallisuusheadersit
-        const importantHeaders = ['strict-transport-security', 'x-frame-options', 'x-content-type-options'];
-        let missingHeaders = importantHeaders.filter(h => !r.headers || !r.headers[h]);
-        if (missingHeaders.length > 0) {
-            issues.push('Puuttuvat headersit: ' + missingHeaders.join(', '));
-            if (riskLevel === 'secure') riskLevel = 'medium';
-        }
-
-        // Avoimet portit (muut kuin 80, 443)
-        if (r.ports) {
-            const riskyPorts = r.ports.filter(p => p.state === 'open' && ![80, 443].includes(p.port));
-            if (riskyPorts.length > 0) {
-                issues.push('Avoimet portit: ' + riskyPorts.map(p => p.port).join(', '));
-                riskLevel = 'high';
-            }
-        }
-
-        // Palvelinversion paljastuminen
-        if (r.headers && r.headers['server'] && r.headers['server'].match(/\d+\.\d+/)) {
-            issues.push('Palvelinversio paljastuu: ' + r.headers['server']);
-            if (riskLevel === 'secure') riskLevel = 'low';
-        }
-
-        findings.push({ domain: r.domain, riskLevel, issues });
-        
-        if (riskLevel === 'critical') critical++;
-        else if (riskLevel === 'high') high++;
-        else if (riskLevel === 'medium') medium++;
-        else if (riskLevel === 'low') low++;
-        else secure++;
-    });
-
-    return { findings, summary: { total: results.length, critical, high, medium, low, secure } };
-}
-
-function generateReportData(results) {
-    const analysis = analyzeRisks(results);
-    
-    // Teknologiatilastot
-    const techCount = {};
-    results.forEach(r => {
-        if (r.technologies) {
-            r.technologies.forEach(t => {
-                techCount[t] = (techCount[t] || 0) + 1;
-            });
-        }
-    });
-    const topTechnologies = Object.entries(techCount)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 10)
-        .map(([name, count]) => ({
-            name,
-            count,
-            percentage: Math.round((count / results.length) * 100)
-        }));
-
-    // Puuttuvat headersit
-    const missingHeadersCount = {};
-    analysis.findings.forEach(f => {
-        f.issues.forEach(issue => {
-            if (issue.includes('Puuttuvat headersit')) {
-                const headers = issue.replace('Puuttuvat headersit: ', '').split(', ');
-                headers.forEach(h => {
-                    missingHeadersCount[h] = (missingHeadersCount[h] || 0) + 1;
-                });
-            }
-        });
-    });
-    const missingHeaders = Object.entries(missingHeadersCount)
-        .sort((a, b) => b[1] - a[1])
-        .map(([name, count]) => ({
-            name,
-            count,
-            percentage: Math.round((count / results.length) * 100)
-        }));
-
-    // Avoimet portit
-    const portsCount = {};
-    results.forEach(r => {
-        if (r.ports) {
-            r.ports.filter(p => p.state === 'open').forEach(p => {
-                const key = p.port + ':' + p.name;
-                portsCount[key] = (portsCount[key] || 0) + 1;
-            });
-        }
-    });
-    const openPorts = Object.entries(portsCount)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 10)
-        .map(([key, count]) => {
-            const [port, name] = key.split(':');
-            return { port: parseInt(port), name, count, percentage: Math.round((count / results.length) * 100) };
-        });
-
-    // Huomioitavaa
-    const observations = [];
-    const secureCount = analysis.summary.secure;
-    if (secureCount === results.length) {
-        observations.push('Kaikki skannatut kohteet ovat turvallisia!');
-    } else if (secureCount > results.length * 0.5) {
-        observations.push('Yli puolet kohteista on turvallisia.');
-    } else {
-        observations.push('Vain ' + secureCount + '/' + results.length + ' kohteesta on turvallisia.');
-    }
-    if (analysis.summary.high > 0) {
-        observations.push(analysis.summary.high + ' kohteella on korkean riskin ongelmia.');
-    }
-    if (topTechnologies.length > 0) {
-        observations.push('Yleisin teknologia: ' + topTechnologies[0].name + ' (' + topTechnologies[0].percentage + '%).');
-    }
-
-    // Suositukset
-    const recommendations = [];
-    if (analysis.summary.high > 0) {
-        recommendations.push({ priority: 'Kriittinen', text: 'Korjaa korkean riskin ongelmat: päivitä SSL-sertifikaatit ja sulje tarpeettomat portit.' });
-    }
-    if (missingHeaders.length > 0) {
-        recommendations.push({ priority: 'Korkea', text: 'Lisää puuttuvat turvallisuusheadersit: ' + missingHeaders.map(h => h.name).join(', ') });
-    }
-    if (analysis.summary.medium > 0) {
-        recommendations.push({ priority: 'Keskitaso', text: 'Tarkista SSL-sertifikaattien vanheneminen.' });
-    }
-    if (recommendations.length === 0) {
-        recommendations.push({ priority: 'Hyvä', text: 'Kaikki hyvin! Jatka hyvää työtä.' });
-    }
-
-    return {
-        timestamp: new Date().toISOString(),
-        totalScanned: results.length,
-        summary: analysis.summary,
-        topTechnologies,
-        missingHeaders,
-        openPorts,
-        observations,
-        recommendations
-    };
-}
-
-// ============================================
-// 6. API-REITIT
+// 5. API-REITIT
 // ============================================
 
 // Yksittäinen skannaus
@@ -790,31 +729,23 @@ app.get('/api/batch-status', (req, res) => {
     });
 });
 
-// Raportti
-app.get('/api/report', (req, res) => {
+// Massaskannauksen tulokset
+app.get('/api/batch-results', (req, res) => {
     if (batchState.results.length === 0) {
         return res.status(404).json({ error: 'Ei skannattuja kohteita. Suorita ensin massaskannaus.' });
     }
-    const report = generateReportData(batchState.results);
-    res.json(report);
-});
-
-// Raportin lataus JSON-muodossa
-app.get('/api/report/download', (req, res) => {
-    if (batchState.results.length === 0) {
-        return res.status(404).json({ error: 'Ei skannattuja kohteita.' });
-    }
-    const report = generateReportData(batchState.results);
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', 'attachment; filename=white-weasel-report-' + new Date().toISOString().slice(0,10) + '.json');
-    res.json(report);
+    res.json({
+        results: batchState.results,
+        total: batchState.results.length,
+        timestamp: new Date().toISOString()
+    });
 });
 
 // ============================================
-// 7. KÄYNNISTYS
+// 6. KÄYNNISTYS
 // ============================================
 app.listen(PORT, () => {
-    console.log('🦡 White Weasel Recon v2.2 — 100 kohdetta + raportti');
+    console.log('🦡 White Weasel Recon v2.3 — 40 kohdetta + suodatus');
     console.log('✅ Palvelin käynnissä portissa ' + PORT);
     console.log('📋 ' + uniqueDomains.length + ' kohdetta listassa');
     console.log('📝 Ei automaattisia skannauksia');
