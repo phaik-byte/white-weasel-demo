@@ -10,12 +10,22 @@ const PORT = process.env.PORT || 3000;
 // Ympäristömuuttujat
 const HIBP_API_KEY = process.env.HIBP_API_KEY || 'testaa-ilman-avainta';
 
+// Haetaan kohdelista omasta tiedostostaan
+const { TARGET_DOMAINS } = require('./targets.js');
+
+// Poistetaan duplikaatit
+const uniqueDomains = [...new Set(TARGET_DOMAINS)];
+
+console.log('📋 ' + uniqueDomains.length + ' kohdetta ladattu targets.js:stä');
+
 app.use(express.static('public'));
 
 // ============================================
 // 1. KÄYTTÖLIITTYMÄ
 // ============================================
 app.get('/', (req, res) => {
+    // Lähetetään kohdemäärä myös HTML:ään, jotta nappi näyttää oikean luvun
+    const targetCount = uniqueDomains.length;
     res.send(`
     <!DOCTYPE html>
     <html>
@@ -89,7 +99,7 @@ app.get('/', (req, res) => {
         <p>Syötä verkkotunnus (esim. <strong>suomi.fi</strong>)</p>
         <input type="text" id="domain" placeholder="esim. suomi.fi" value="suomi.fi">
         <button onclick="scan()">🔍 Skannaa</button>
-        <button onclick="scanBatch()" class="danger">🔄 Skannaa 40 kohdetta</button>
+        <button onclick="scanBatch()" class="danger">🔄 Skannaa ${targetCount} kohdetta</button>
         <button onclick="showReport()" class="secondary">📊 Raportti</button>
         <div id="status">
             <span id="statusText">⏳ Ladataan...</span>
@@ -97,7 +107,7 @@ app.get('/', (req, res) => {
         <div id="result">
             <p class="loading">Odota skannausta...</p>
         </div>
-        <div class="footer">White Weasel Recon v2.3 — 40 kohdetta + suodatus</div>
+        <div class="footer">White Weasel Recon v2.4 — Kohdelista omassa tiedostossa</div>
 
         <script>
         let batchStatus = { running: false, total: 0, current: 0, domain: '', results: [] };
@@ -109,7 +119,7 @@ app.get('/', (req, res) => {
             if (!domain) { alert('Syötä verkkotunnus!'); return; }
             document.getElementById('result').innerHTML = '<p class="loading">⏳ Skannataan...</p>';
             try {
-                const response = await fetch('/api/scan?domain=' + encodeURIComponent(domain));
+                const response = await fetch(window.location.origin + '/api/scan?domain=' + encodeURIComponent(domain));
                 const data = await response.json();
                 document.getElementById('result').innerHTML = formatResult(data);
             } catch (error) {
@@ -122,14 +132,14 @@ app.get('/', (req, res) => {
                 alert('Skannaus on jo käynnissä!');
                 return;
             }
-            if (!confirm('Skannataan 40 satunnaista .fi-domainia. Tämä voi kestää 8-12 minuuttia. Jatketaanko?')) return;
+            if (!confirm('Skannataan ${allResults.length || '?'} kohdetta. Tämä voi kestää 8-12 minuuttia. Jatketaanko?')) return;
             
             document.getElementById('result').innerHTML = '<p class="loading">⏳ Käynnistetään massaskannaus...</p>';
             batchStatus.running = true;
             allResults = [];
             
             try {
-                const response = await fetch('/api/scan-batch', { method: 'POST' });
+                const response = await fetch(window.location.origin + '/api/scan-batch', { method: 'POST' });
                 const data = await response.json();
                 if (data.error) {
                     document.getElementById('result').innerHTML = '<p class="error">❌ ' + data.error + '</p>';
@@ -147,7 +157,7 @@ app.get('/', (req, res) => {
         async function showReport() {
             document.getElementById('result').innerHTML = '<p class="loading">⏳ Haetaan tuloksia...</p>';
             try {
-                const response = await fetch('/api/batch-results');
+                const response = await fetch(window.location.origin + '/api/batch-results');
                 const data = await response.json();
                 if (data.error) {
                     document.getElementById('result').innerHTML = '<p class="error">❌ ' + data.error + '</p>';
@@ -222,7 +232,6 @@ app.get('/', (req, res) => {
             let risk = 'secure';
             let hasIssues = false;
 
-            // SSL-ongelmat
             if (result.ssl && !result.ssl.valid) {
                 risk = 'high';
                 hasIssues = true;
@@ -231,7 +240,6 @@ app.get('/', (req, res) => {
                 hasIssues = true;
             }
 
-            // Avoimet portit (muut kuin 80, 443)
             if (result.ports) {
                 const riskyPorts = result.ports.filter(p => p.state === 'open' && ![80, 443].includes(p.port));
                 if (riskyPorts.length > 0) {
@@ -240,7 +248,6 @@ app.get('/', (req, res) => {
                 }
             }
 
-            // Puuttuvat turvallisuusheadersit
             if (result.headers) {
                 const important = ['strict-transport-security', 'x-frame-options', 'x-content-type-options'];
                 const missing = important.filter(h => !result.headers[h]);
@@ -253,7 +260,6 @@ app.get('/', (req, res) => {
                 }
             }
 
-            // Palvelinversion paljastuminen
             if (result.headers && result.headers['server'] && result.headers['server'].match(/\d+\.\d+/)) {
                 if (risk === 'secure') risk = 'low';
                 hasIssues = true;
@@ -307,15 +313,14 @@ app.get('/', (req, res) => {
             if (!batchStatus.running) return;
             
             try {
-                const response = await fetch('/api/batch-status');
+                const response = await fetch(window.location.origin + '/api/batch-status');
                 const data = await response.json();
                 
                 const statusText = document.getElementById('statusText');
                 if (data.status === 'idle') {
                     statusText.innerHTML = '🟢 Valmis! Skannattu ' + data.total + ' kohdetta.';
                     batchStatus.running = false;
-                    // Hae tulokset automaattisesti
-                    const res = await fetch('/api/batch-results');
+                    const res = await fetch(window.location.origin + '/api/batch-results');
                     const results = await res.json();
                     if (results.results && results.results.length > 0) {
                         allResults = results.results;
@@ -440,54 +445,10 @@ app.get('/', (req, res) => {
 });
 
 // ============================================
-// 2. 40 PIENEN YRITYKSEN .fi-DOMAINIA
-// ============================================
-const TARGET_DOMAINS = [
-    // Ravintolat ja kahvilat
-    'ravintola.fi', 'kahvila.fi', 'ravintolakoti.fi', 'lounasravintola.fi',
-    'konditoria.fi', 'leipomo.fi', 'pizzeria.fi', 'grilli.fi',
-    
-    // Kauneus ja hyvinvointi
-    'parturi.fi', 'kampaamo.fi', 'hieroja.fi', 'fysioterapia.fi',
-    'kosmetologi.fi', 'kuntosali.fi',
-    
-    // Rakentaminen ja remontti
-    'rakennus.fi', 'remontti.fi', 'maalarit.fi', 'lvi.fi',
-    'sahkotyo.fi', 'lattianhoito.fi',
-    
-    // Kiinteistöt ja asuminen
-    'kiinteisto.fi', 'asunto.fi', 'vuokraus.fi', 'sisustus.fi',
-    
-    // Kuljetus ja logistiikka
-    'kuljetus.fi', 'logistiikka.fi', 'muutto.fi', 'taksi.fi',
-    
-    // Tietotekniikka ja digi
-    'it-palvelut.fi', 'verkkosivut.fi', 'digimarkkinointi.fi',
-    'ohjelmointi.fi', 'tietoturva.fi',
-    
-    // Koulutus ja konsultointi
-    'koulutus.fi', 'konsultointi.fi', 'valmennus.fi', 'kielikoulu.fi',
-    
-    // Terveys ja hyvinvointi
-    'optikko.fi', 'apteekki.fi', 'ravitsemus.fi',
-    
-    // Kauppa ja verkkokauppa
-    'verkkokauppa.fi', 'puutarha.fi', 'kukkakauppa.fi',
-    
-    // Auto ja liikenne
-    'autokorjaamo.fi', 'renkaat.fi', 'varaosat.fi'
-];
-
-// Poistetaan duplikaatit ja otetaan 40 ensimmäistä
-const uniqueDomains = [...new Set(TARGET_DOMAINS)].slice(0, 40);
-
-console.log('📋 ' + uniqueDomains.length + ' kohdetta listassa');
-
-// ============================================
-// 3. SKANNAUSFUNKTIOT
+// 2. SKANNAUSFUNKTIOT
 // ============================================
 
-// PORTIT (tärkeimmät massaskannaukseen)
+// PORTIT
 const COMMON_PORTS = [
     { port: 20, name: 'FTP-data' }, { port: 21, name: 'FTP' }, { port: 22, name: 'SSH' },
     { port: 23, name: 'Telnet' }, { port: 25, name: 'SMTP' }, { port: 53, name: 'DNS' },
@@ -605,7 +566,6 @@ async function checkSSL(domain) {
 async function performScan(domain) {
     const result = { domain, timestamp: new Date().toISOString() };
     try {
-        // HTTP-headers
         const headerData = await fetchHeaders(domain);
         if (headerData.error) {
             result.error = headerData.error;
@@ -613,14 +573,9 @@ async function performScan(domain) {
         }
         result.headers = headerData.headers;
         result.technologies = identifyTechnologies(headerData.headers);
-        
-        // SSL
         result.ssl = await checkSSL(domain);
-        
-        // Portit
         result.ports = await scanPorts(domain);
 
-        // HIBP
         if (HIBP_API_KEY && HIBP_API_KEY !== 'testaa-ilman-avainta') {
             try {
                 const hibpResponse = await axios.get(
@@ -650,7 +605,7 @@ async function performScan(domain) {
 }
 
 // ============================================
-// 4. MASSASKANNAUS
+// 3. MASSASKANNAUS
 // ============================================
 let batchState = {
     status: 'idle',
@@ -690,10 +645,9 @@ async function runBatchScan() {
 }
 
 // ============================================
-// 5. API-REITIT
+// 4. API-REITIT
 // ============================================
 
-// Yksittäinen skannaus
 app.get('/api/scan', async (req, res) => {
     const domain = req.query.domain;
     if (!domain) {
@@ -707,17 +661,14 @@ app.get('/api/scan', async (req, res) => {
     }
 });
 
-// Massaskannaus (käynnistä)
 app.post('/api/scan-batch', async (req, res) => {
     if (batchState.status === 'scanning') {
         return res.status(409).json({ error: 'Skannaus jo käynnissä!' });
     }
-    // Käynnistä taustalla
     runBatchScan().catch(console.error);
     res.json({ message: 'Massaskannaus käynnistetty! Seuraa edistymistä.' });
 });
 
-// Massaskannauksen tila
 app.get('/api/batch-status', (req, res) => {
     res.json({
         status: batchState.status,
@@ -729,7 +680,6 @@ app.get('/api/batch-status', (req, res) => {
     });
 });
 
-// Massaskannauksen tulokset
 app.get('/api/batch-results', (req, res) => {
     if (batchState.results.length === 0) {
         return res.status(404).json({ error: 'Ei skannattuja kohteita. Suorita ensin massaskannaus.' });
@@ -742,11 +692,11 @@ app.get('/api/batch-results', (req, res) => {
 });
 
 // ============================================
-// 6. KÄYNNISTYS
+// 5. KÄYNNISTYS
 // ============================================
 app.listen(PORT, () => {
-    console.log('🦡 White Weasel Recon v2.3 — 40 kohdetta + suodatus');
+    console.log('🦡 White Weasel Recon v2.4 — Kohdelista omassa tiedostossa');
     console.log('✅ Palvelin käynnissä portissa ' + PORT);
-    console.log('📋 ' + uniqueDomains.length + ' kohdetta listassa');
-    console.log('📝 Ei automaattisia skannauksia');
+    console.log('📋 ' + uniqueDomains.length + ' kohdetta ladattu targets.js:stä');
+    console.log('📝 Muokkaa targets.js-tiedostoa muuttaaksesi kohdelistaa');
 });
