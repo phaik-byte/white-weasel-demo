@@ -20,14 +20,12 @@ try {
     console.log('✅ Kohdelista ladattu targets.js:stä (' + TARGET_DOMAINS.length + ' kohdetta)');
 } catch (error) {
     console.error('⚠️ targets.js-tiedostoa ei löytynyt, käytetään oletuslistaa');
-    // Oletuslista (jos targets.js puuttuu)
     TARGET_DOMAINS = [
         'suomi.fi', 'valtioneuvosto.fi', 'eduskunta.fi',
         'helsinki.fi', 'tampere.fi', 'turku.fi'
     ];
 }
 
-// Poistetaan duplikaatit
 const uniqueDomains = [...new Set(TARGET_DOMAINS)];
 console.log('📋 ' + uniqueDomains.length + ' kohdetta listassa');
 
@@ -101,7 +99,7 @@ app.get('/', (req, res) => {
         <button onclick="showReport()" class="secondary">📊 Raportti</button>
         <div id="status"><span id="statusText">⏳ Ladataan...</span></div>
         <div id="result"><p class="loading">Odota skannausta...</p></div>
-        <div class="footer">White Weasel Recon v2.5 — Kohdelista targets.js:stä</div>
+        <div class="footer">White Weasel Recon v2.6 — Korjattu API-yhteys</div>
 
         <script>
         let batchStatus = { running: false };
@@ -114,7 +112,7 @@ app.get('/', (req, res) => {
             if (!domain) { alert('Syötä verkkotunnus!'); return; }
             document.getElementById('result').innerHTML = '<p class="loading">⏳ Skannataan...</p>';
             try {
-                const response = await fetch('/api/scan?domain=' + encodeURIComponent(domain));
+                const response = await fetch(window.location.origin + '/api/scan?domain=' + encodeURIComponent(domain));
                 const data = await response.json();
                 document.getElementById('result').innerHTML = formatResult(data);
             } catch (error) {
@@ -130,7 +128,7 @@ app.get('/', (req, res) => {
             batchStatus.running = true;
             
             try {
-                const response = await fetch('/api/scan-batch', { method: 'POST' });
+                const response = await fetch(window.location.origin + '/api/scan-batch', { method: 'POST' });
                 const data = await response.json();
                 if (data.error) {
                     document.getElementById('result').innerHTML = '<p class="error">❌ ' + data.error + '</p>';
@@ -148,7 +146,7 @@ app.get('/', (req, res) => {
         async function showReport() {
             document.getElementById('result').innerHTML = '<p class="loading">⏳ Haetaan tuloksia...</p>';
             try {
-                const response = await fetch('/api/batch-results');
+                const response = await fetch(window.location.origin + '/api/batch-results');
                 const data = await response.json();
                 if (data.error) {
                     document.getElementById('result').innerHTML = '<p class="error">❌ ' + data.error + '</p>';
@@ -248,13 +246,13 @@ app.get('/', (req, res) => {
         async function updateBatchStatus() {
             if (!batchStatus.running) return;
             try {
-                const response = await fetch('/api/batch-status');
+                const response = await fetch(window.location.origin + '/api/batch-status');
                 const data = await response.json();
                 const statusText = document.getElementById('statusText');
                 if (data.status === 'idle') {
                     statusText.innerHTML = '🟢 Valmis! Skannattu ' + data.total + ' kohdetta.';
                     batchStatus.running = false;
-                    const res = await fetch('/api/batch-results');
+                    const res = await fetch(window.location.origin + '/api/batch-results');
                     const results = await res.json();
                     if (results.results && results.results.length > 0) {
                         allResults = results.results;
@@ -495,7 +493,7 @@ app.get('/api/batch-results', (req, res) => {
 // 5. KÄYNNISTYS
 // ============================================
 app.listen(PORT, () => {
-    console.log('🦡 White Weasel Recon v2.5');
+    console.log('🦡 White Weasel Recon v2.6 — Korjattu API-yhteys');
     console.log('✅ Palvelin käynnissä portissa ' + PORT);
     console.log('📋 ' + uniqueDomains.length + ' kohdetta listassa');
     console.log('📝 Skannaus käynnistyy vain napista painamalla');
