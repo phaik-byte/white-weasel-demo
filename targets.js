@@ -8,69 +8,69 @@
 
 const TARGET_DOMAINS = [
     // Ravintolat ja kahvilat
-    'ravintola.fi', 
-    'kahvila.fi', 
-    'ravintolakoti.fi', 
+    'ravintola.fi',
+    'kahvila.fi',
+    'ravintolakoti.fi',
     'lounasravintola.fi',
-    'konditoria.fi', 
-    'leipomo.fi', 
-    'pizzeria.fi', 
+    'konditoria.fi',
+    'leipomo.fi',
+    'pizzeria.fi',
     'grilli.fi',
     
     // Kauneus ja hyvinvointi
-    'parturi.fi', 
-    'kampaamo.fi', 
-    'hieroja.fi', 
+    'parturi.fi',
+    'kampaamo.fi',
+    'hieroja.fi',
     'fysioterapia.fi',
-    'kosmetologi.fi', 
+    'kosmetologi.fi',
     'kuntosali.fi',
     
     // Rakentaminen ja remontti
-    'rakennus.fi', 
-    'remontti.fi', 
-    'maalarit.fi', 
+    'rakennus.fi',
+    'remontti.fi',
+    'maalarit.fi',
     'lvi.fi',
-    'sahkotyo.fi', 
+    'sahkotyo.fi',
     'lattianhoito.fi',
     
     // Kiinteistöt ja asuminen
-    'kiinteisto.fi', 
-    'asunto.fi', 
-    'vuokraus.fi', 
+    'kiinteisto.fi',
+    'asunto.fi',
+    'vuokraus.fi',
     'sisustus.fi',
     
     // Kuljetus ja logistiikka
-    'kuljetus.fi', 
-    'logistiikka.fi', 
-    'muutto.fi', 
+    'kuljetus.fi',
+    'logistiikka.fi',
+    'muutto.fi',
     'taksi.fi',
     
     // Tietotekniikka ja digi
-    'it-palvelut.fi', 
-    'verkkosivut.fi', 
+    'it-palvelut.fi',
+    'verkkosivut.fi',
     'digimarkkinointi.fi',
-    'ohjelmointi.fi', 
+    'ohjelmointi.fi',
     'tietoturva.fi',
     
     // Koulutus ja konsultointi
-    'koulutus.fi', 
-    'konsultointi.fi', 
-    'valmennus.fi', 
+    'koulutus.fi',
+    'konsultointi.fi',
+    'valmennus.fi',
     'kielikoulu.fi',
     
     // Terveys ja hyvinvointi
-    'optikko.fi', 
-    'apteekki.fi', 
+    'optikko.fi',
+    'apteekki.fi',
     'ravitsemus.fi',
     
     // Kauppa ja verkkokauppa
-    'verkkokauppa.fi', 
-    'puutarha.fi', 
+    'verkkokauppa.fi',
+    'puutarha.fi',
     'kukkakauppa.fi',
     
     // Auto ja liikenne
-    'autokorjaamo.fi', 
-    'renkaat.fi', 
+    'autokorjaamo.fi',
+    'renkaat.fi',
     'varaosat.fi'
 ];
 
