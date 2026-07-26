@@ -496,4 +496,4 @@ app.get('/api/batch-results', (req, res) => {
 // ============================================
 app.listen(PORT, () => {
     console.log('🦡 White Weasel Recon v2.5');
-    console.log('✅ Palvelin käynnissä portissa ' + PORT
+    console.log('✅ Palvelin käynnissä portissa ' + PORT);
