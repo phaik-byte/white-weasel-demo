@@ -17,7 +17,7 @@ const SCAN_INTERVAL = parseInt(process.env.SCAN_INTERVAL) || 86400000; // 24h
 app.use(express.static('public'));
 
 // ============================================
-// 1. KÄYTTÖLIITTYMÄ (toimiva versio)
+// 1. KÄYTTÖLIITTYMÄ
 // ============================================
 app.get('/', (req, res) => {
     res.send(`
@@ -35,8 +35,6 @@ app.get('/', (req, res) => {
             input { width: 45%; border: 2px solid #bdc3c7; border-radius: 5px; }
             button { background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; }
             button:hover { background: #2980b9; }
-            button.danger { background: #e74c3c; }
-            button.danger:hover { background: #c0392b; }
             #result { margin-top: 20px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
             #autostatus { margin-top: 10px; padding: 10px; background: #e8f4f8; border-radius: 5px; border-left: 4px solid #3498db; }
             .loading { color: #3498db; font-style: italic; }
@@ -56,7 +54,7 @@ app.get('/', (req, res) => {
         <p>Syötä verkkotunnus (esim. <strong>suomi.fi</strong>)</p>
         <input type="text" id="domain" placeholder="esim. suomi.fi" value="suomi.fi">
         <button onclick="scan()">🔍 Skannaa</button>
-        <button onclick="scanAll()">🔄 Skannaa 100 kohdetta</button>
+        <button onclick="scanAll()">🔄 Skannaa 40 kohdetta</button>
         <button onclick="generateReport()">📊 Luo raportti</button>
         <div id="autostatus">
             <span id="statusText">⏳ Ladataan tilaa...</span>
@@ -64,7 +62,7 @@ app.get('/', (req, res) => {
         <div id="result">
             <p class="loading">Odota skannausta...</p>
         </div>
-        <div class="footer">White Weasel Recon v1.0 — Toimiva versio</div>
+        <div class="footer">White Weasel Recon v1.1 — Taustaskannauksella</div>
 
         <script>
         async function scan() {
@@ -81,12 +79,12 @@ app.get('/', (req, res) => {
         }
 
         async function scanAll() {
-            if (!confirm('Skannataan 100 kohdetta. Tämä voi kestää 15-25 minuuttia. Jatketaanko?')) return;
+            if (!confirm('Skannataan 40 kohdetta. Tämä voi kestää 10-15 minuuttia. Jatketaanko?')) return;
             document.getElementById('result').innerHTML = '<p class="loading">⏳ Käynnistetään massaskannaus...</p>';
             try {
                 const response = await fetch(window.location.origin + '/api/scan-batch', { method: 'POST' });
                 const data = await response.json();
-                document.getElementById('result').innerHTML = '<p class="success">✅ ' + data.message + '</p>';
+                document.getElementById('result').innerHTML = '<p class="success">✅ ' + data.message + '</p><p>Seuraa edistymistä yllä olevasta tilapalkista.</p>';
                 updateStatus();
             } catch (error) {
                 document.getElementById('result').innerHTML = '<p class="error">❌ Virhe: ' + error.message + '</p>';
@@ -509,7 +507,7 @@ function generateReportData(results) {
 }
 
 // ============================================
-// 5. API-REITIT
+// 5. API-REITIT (KORJATTU)
 // ============================================
 let scanState = {
     status: 'idle',
@@ -581,12 +579,15 @@ app.get('/api/scan', async (req, res) => {
     }
 });
 
+// KORJATTU: Tämä vastaa heti ja käynnistää skannauksen taustalla
 app.post('/api/scan-batch', async (req, res) => {
     if (scanState.status === 'scanning') {
         return res.status(409).json({ message: 'Skannaus jo käynnissä!' });
     }
+    // Käynnistä skannaus taustalla (älä odota)
     runBatchScan().catch(console.error);
-    res.json({ message: 'Massaskannaus käynnistetty!' });
+    // Vastaa heti selaimelle
+    res.json({ message: 'Massaskannaus käynnistetty! Seuraa edistymistä tilapalkista.' });
 });
 
 app.get('/api/status', (req, res) => {
@@ -602,7 +603,7 @@ app.get('/api/status', (req, res) => {
 
 app.get('/api/report', (req, res) => {
     if (scanState.results.length === 0) {
-        return res.status(404).json({ error: 'Ei skannattuja kohteita.' });
+        return res.status(404).json({ error: 'Ei skannattuja kohteita. Suorita ensin skannaus.' });
     }
     const report = generateReportData(scanState.results);
     res.json(report);
@@ -622,7 +623,7 @@ app.get('/api/report/download', async (req, res) => {
 // 6. KÄYNNISTYS
 // ============================================
 app.listen(PORT, async () => {
-    console.log('🦡 White Weasel Recon v1.0');
+    console.log('🦡 White Weasel Recon v1.1 — Taustaskannauksella');
     console.log('📋 ' + TARGET_DOMAINS.length + ' kohdetta listassa');
     console.log('✅ Palvelin käynnissä portissa ' + PORT);
     await loadResults();
