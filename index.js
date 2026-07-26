@@ -19,7 +19,7 @@ const SCAN_INTERVAL = parseInt(process.env.SCAN_INTERVAL) || 86400000; // 24h
 app.use(express.static('public'));
 
 // ============================================
-// 1. KÄYTTÖLIITTYMÄ (yksinkertaistettu)
+// 1. KÄYTTÖLIITTYMÄ
 // ============================================
 app.get('/', (req, res) => {
     res.send(`
@@ -130,7 +130,6 @@ app.get('/', (req, res) => {
             
             html += '<p><strong>🔍 Verkkotunnus:</strong> ' + data.domain + '</p>';
             
-            // Teknologiat
             if (data.technologies && data.technologies.length > 0) {
                 html += '<h3>🧩 Teknologiat</h3><div>';
                 data.technologies.forEach(t => {
@@ -139,7 +138,6 @@ app.get('/', (req, res) => {
                 html += '</div>';
             }
 
-            // Turvallisuusheadersit
             if (data.headers) {
                 html += '<h3>🛡️ Turvallisuusheadersit</h3><ul>';
                 const important = ['strict-transport-security', 'x-frame-options', 'x-content-type-options', 'content-security-policy'];
@@ -154,7 +152,6 @@ app.get('/', (req, res) => {
                 html += '</ul>';
             }
 
-            // SSL
             if (data.ssl) {
                 html += '<h3>🔒 SSL</h3>';
                 if (data.ssl.valid) {
@@ -164,7 +161,6 @@ app.get('/', (req, res) => {
                 }
             }
 
-            // Avoimet portit
             if (data.ports) {
                 const openPorts = data.ports.filter(p => p.state === 'open');
                 if (openPorts.length > 0) {
@@ -182,7 +178,6 @@ app.get('/', (req, res) => {
             html += '<p><strong>Skannausajankohta:</strong> ' + new Date(data.timestamp).toLocaleString('fi-FI') + '</p>';
             html += '<p><strong>Skannattuja kohteita:</strong> ' + data.totalScanned + '</p>';
 
-            // Yhteenveto
             html += '<h3>📈 Yhteenveto</h3>';
             html += '<div class="stat-grid">';
             html += '<div class="stat-card"><div class="stat-number">' + data.summary.total + '</div><div class="stat-label">Skannatut kohteet</div></div>';
@@ -193,7 +188,6 @@ app.get('/', (req, res) => {
             html += '<div class="stat-card" style="border-left-color:#27ae60;"><div class="stat-number">' + data.summary.secure + '</div><div class="stat-label">Turvalliset</div></div>';
             html += '</div>';
 
-            // Yleisimmät teknologiat
             if (data.topTechnologies && data.topTechnologies.length > 0) {
                 html += '<h3>🧩 Yleisimmät teknologiat</h3><ul>';
                 data.topTechnologies.forEach(t => {
@@ -202,7 +196,6 @@ app.get('/', (req, res) => {
                 html += '</ul>';
             }
 
-            // Yleisimmät puuttuvat headersit
             if (data.missingHeaders && data.missingHeaders.length > 0) {
                 html += '<h3>🛡️ Yleisimmin puuttuvat turvallisuusheadersit</h3><ul>';
                 data.missingHeaders.forEach(h => {
@@ -211,7 +204,6 @@ app.get('/', (req, res) => {
                 html += '</ul>';
             }
 
-            // Yleisimmät avoimet portit
             if (data.openPorts && data.openPorts.length > 0) {
                 html += '<h3>🚪 Yleisimmät avoimet portit</h3><ul>';
                 data.openPorts.forEach(p => {
@@ -220,7 +212,6 @@ app.get('/', (req, res) => {
                 html += '</ul>';
             }
 
-            // Huomioitavaa
             if (data.observations && data.observations.length > 0) {
                 html += '<h3>💡 Huomioitavaa</h3><ul>';
                 data.observations.forEach(o => {
@@ -229,7 +220,6 @@ app.get('/', (req, res) => {
                 html += '</ul>';
             }
 
-            // Suositukset
             if (data.recommendations && data.recommendations.length > 0) {
                 html += '<h3>🎯 Suositukset</h3><ul>';
                 data.recommendations.forEach(r => {
@@ -256,16 +246,13 @@ app.get('/', (req, res) => {
 // ============================================
 // 2. DOMAIN LISTA (100 satunnaista .fi)
 // ============================================
-// Tämä on esimerkkilista. Todellisuudessa voisit hakea nämä 
-// esim. Traficomin julkisista rekistereistä tai DNS-zone transfer -listalta.
-// Nyt käytämme tunnettuja suomalaisia verkkotunnuksia + generoituja
 const FIXED_DOMAINS = [
     'suomi.fi', 'valtioneuvosto.fi', 'eduskunta.fi', 'traficom.fi',
     'kyberturvallisuuskeskus.fi', 'digi.fi', 'verohallinto.fi',
     'kela.fi', 'migri.fi', 'polisi.fi', 'om.fi', 'vm.fi', 'defmin.fi',
     'helsinki.fi', 'tampere.fi', 'turku.fi', 'oulu.fi', 'jyvaskyla.fi',
     'lahti.fi', 'kuopio.fi', 'pori.fi', 'lappeenranta.fi', 'rovaniemi.fi',
-    'aalto.fi', 'helsinki.fi', 'tuni.fi', 'oulu.fi', 'utu.fi',
+    'aalto.fi', 'tuni.fi', 'utu.fi',
     'nokia.fi', 'kone.fi', 'valmet.fi', 'fortum.fi', 'storaenso.fi',
     'kesko.fi', 's-group.fi', 'lidl.fi', 'prisma.fi', 'tokmanni.fi',
     'verkkokauppa.fi', 'gigantti.fi', 'power.fi', 'sokos.fi',
@@ -301,17 +288,15 @@ function generateRandomDomains(count) {
     return domains;
 }
 
-// Yhdistetään kiinteät ja satunnaiset -> 100 kohdetta
 let TARGET_DOMAINS = [...FIXED_DOMAINS];
 const randomDomains = generateRandomDomains(100 - FIXED_DOMAINS.length);
 TARGET_DOMAINS = TARGET_DOMAINS.concat(randomDomains);
-// Varmistetaan, että max 100
 TARGET_DOMAINS = TARGET_DOMAINS.slice(0, 100);
 
 console.log(`📋 ${TARGET_DOMAINS.length} kohdetta listassa (${FIXED_DOMAINS.length} kiinteää + ${TARGET_DOMAINS.length - FIXED_DOMAINS.length} satunnaista)`);
 
 // ============================================
-// 3. SKANNAUSFUNKTIOT (aiemmat, lyhennetty)
+// 3. SKANNAUSFUNKTIOT
 // ============================================
 const COMMON_PORTS = [
     { port: 20, name: 'FTP-data' }, { port: 21, name: 'FTP' }, { port: 22, name: 'SSH' },
@@ -398,7 +383,6 @@ async function checkSSL(domain) {
 async function performScan(domain) {
     const result = { domain, timestamp: new Date().toISOString() };
     try {
-        // HTTP-headers
         const headerData = await fetchHeaders(domain);
         if (headerData.error) {
             result.error = headerData.error;
@@ -407,13 +391,9 @@ async function performScan(domain) {
         result.headers = headerData.headers;
         result.technologies = identifyTechnologies(headerData.headers);
         
-        // SSL
         result.ssl = await checkSSL(domain);
-        
-        // Portit
         result.ports = await scanPorts(domain);
         
-        // DNS (kevyt versio)
         try {
             result.dns = {
                 A: await dns.resolve4(domain).catch(() => []),
@@ -428,7 +408,7 @@ async function performScan(domain) {
 }
 
 // ============================================
-// 4. RISKIANALYYSI JA RAPORTOINTI (uusi!)
+// 4. RISKIANALYYSI JA RAPORTOINTI
 // ============================================
 function analyzeRisks(results) {
     const findings = [];
@@ -438,7 +418,6 @@ function analyzeRisks(results) {
         let riskLevel = 'secure';
         const issues = [];
 
-        // 1. SSL ongelmat
         if (r.ssl && !r.ssl.valid) {
             issues.push('SSL-sertifikaatti vanhentunut tai virheellinen');
             riskLevel = 'high';
@@ -447,7 +426,6 @@ function analyzeRisks(results) {
             if (riskLevel === 'secure') riskLevel = 'medium';
         }
 
-        // 2. Turvallisuusheadersit
         const importantHeaders = ['strict-transport-security', 'x-frame-options', 'x-content-type-options'];
         let missingHeaders = importantHeaders.filter(h => !r.headers || !r.headers[h]);
         if (missingHeaders.length > 0) {
@@ -455,7 +433,6 @@ function analyzeRisks(results) {
             if (riskLevel === 'secure') riskLevel = 'medium';
         }
 
-        // 3. Avoimet portit (muut kuin 80, 443)
         if (r.ports) {
             const riskyPorts = r.ports.filter(p => p.state === 'open' && ![80, 443].includes(p.port));
             if (riskyPorts.length > 0) {
@@ -464,7 +441,6 @@ function analyzeRisks(results) {
             }
         }
 
-        // 4. Palvelinversioiden paljastuminen
         if (r.headers && r.headers['server'] && r.headers['server'].match(/\d+\.\d+/)) {
             issues.push('Palvelinversio paljastuu: ' + r.headers['server']);
             if (riskLevel === 'secure') riskLevel = 'low';
@@ -485,7 +461,6 @@ function analyzeRisks(results) {
 function generateReportData(results) {
     const analysis = analyzeRisks(results);
     
-    // Teknologiatilastot
     const techCount = {};
     analysis.findings.forEach(f => {
         f.technologies.forEach(t => {
@@ -501,7 +476,6 @@ function generateReportData(results) {
             percentage: Math.round((count / results.length) * 100)
         }));
 
-    // Puuttuvat headersit
     const missingHeadersCount = {};
     analysis.findings.forEach(f => {
         if (f.issues.some(i => i.includes('Puuttuvat turvallisuusheadersit'))) {
@@ -522,7 +496,6 @@ function generateReportData(results) {
             percentage: Math.round((count / results.length) * 100)
         }));
 
-    // Avoimet portit
     const portsCount = {};
     results.forEach(r => {
         if (r.ports) {
@@ -540,7 +513,6 @@ function generateReportData(results) {
             return { port: parseInt(port), name, count, percentage: Math.round((count / results.length) * 100) };
         });
 
-    // Huomioitavaa
     const observations = [];
     const secureCount = analysis.summary.secure;
     if (secureCount === results.length) {
@@ -557,7 +529,6 @@ function generateReportData(results) {
         observations.push('Yleisin teknologia on ' + topTechnologies[0].name + ' (' + topTechnologies[0].percentage + '% kohteista).');
     }
 
-    // Suositukset
     const recommendations = [];
     if (analysis.summary.high > 0) {
         recommendations.push({ priority: 'Kriittinen', text: 'Korjaa korkean riskin ongelmat: päivitä SSL-sertifikaatit ja sulje tarpeettomat portit.' });
@@ -584,12 +555,12 @@ function generateReportData(results) {
         openPorts,
         observations,
         recommendations,
-        findings: analysis.findings.slice(0, 20) // Vain 20 ensimmäistä, jotta raportti ei ole liian pitkä
+        findings: analysis.findings.slice(0, 20)
     };
 }
 
 // ============================================
-// 5. API-REITIT (päivitetty)
+// 5. API-REITIT
 // ============================================
 let scanState = {
     status: 'idle',
@@ -627,4 +598,29 @@ async function runBatchScan() {
         return;
     }
 
-    console.log(`🚀 Käynnistetään massaskannaus (${TARGET_DOMAINS.length} k
+    console.log(`🚀 Käynnistetään massaskannaus (${TARGET_DOMAINS.length} kohdetta)...`);
+    scanState.status = 'scanning';
+    scanState.results = [];
+
+    for (let i = 0; i < TARGET_DOMAINS.length; i++) {
+        const domain = TARGET_DOMAINS[i];
+        scanState.currentIndex = i + 1;
+        scanState.currentDomain = domain;
+        console.log(`🦡 [${i+1}/${TARGET_DOMAINS.length}] Skannataan: ${domain}`);
+
+        const result = await performScan(domain);
+        scanState.results.push(result);
+        await new Promise(resolve => setTimeout(resolve, 500)); // Pieni viive
+    }
+
+    scanState.status = 'idle';
+    scanState.lastScan = new Date().toISOString();
+    scanState.currentDomain = '';
+    await saveResults();
+    console.log('🏁 Massaskannaus valmis!');
+}
+
+app.get('/api/scan', async (req, res) => {
+    const domain = req.query.domain;
+    if (!domain) return res.status(400).json({ error: 'Domain puuttuu' });
+    try
