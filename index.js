@@ -5,11 +5,8 @@ const net = require('net');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Ympäristömuuttujat
-const HIBP_API_KEY = process.env.HIBP_API_KEY || 'testaa-ilman-avainta';
-
 // ============================================
-// KOHDELISTA (kovakoodattu tähän)
+// KOHDELISTA (kovakoodattu)
 // ============================================
 const TARGET_DOMAINS = [
     'suomi.fi', 'valtioneuvosto.fi', 'eduskunta.fi',
@@ -43,16 +40,13 @@ app.get('/', (req, res) => {
             .error { color: #e74c3c; }
             .success { color: #27ae60; }
             .domain-item { padding: 5px; border-bottom: 1px solid #eee; }
-            .domain-item.done { color: #27ae60; }
-            .domain-item.error { color: #e74c3c; }
         </style>
     </head>
     <body>
         <h1>🦡 White Weasel Recon</h1>
         <button onclick="scanBatch()" class="danger">🔄 Skannaa ${targetCount} kohdetta</button>
         <div id="status"><span id="statusText">⏳ Valmis...</span></div>
-        <div id="result"><p class="loading">Odota skannausta...</p></div>
-        <div class="footer">White Weasel v3.0 — Yksinkertainen versio</div>
+        <div id="result"><p>Valmis skannaamaan ${targetCount} kohdetta.</p></div>
 
         <script>
         let isRunning = false;
@@ -108,12 +102,10 @@ app.get('/', (req, res) => {
                     statusText.innerHTML = '🟡 Skannaus käynnissä... ' + data.currentIndex + '/' + data.total + ': ' + data.currentDomain;
                 }
                 setTimeout(updateStatus, 3000);
-            } catch (e) { setTimeout(updateStatus, 5000); }
+            } catch (e) {
+                setTimeout(updateStatus, 5000);
+            }
         }
-
-        window.onload = function() {
-            document.getElementById('result').innerHTML = '<p>Valmis skannaamaan ' + ${targetCount} + ' kohdetta.</p>';
-        };
         </script>
     </body>
     </html>
@@ -139,17 +131,32 @@ async function checkPort(host, port, timeout = 3000) {
 // Tarkistetaan SSL
 async function checkSSL(domain) {
     return new Promise((resolve) => {
-        const options = { host: domain, port: 443, method: 'HEAD', rejectUnauthorized: false, timeout: 8000 };
+        const options = { 
+            host: domain, 
+            port: 443, 
+            method: 'HEAD', 
+            rejectUnauthorized: false, 
+            timeout: 8000 
+        };
         const req = https.request(options, (res) => {
             const cert = res.socket.getPeerCertificate();
-            if (!cert || Object.keys(cert).length === 0) return resolve({ valid: false });
+            if (!cert || Object.keys(cert).length === 0) {
+                return resolve({ valid: false });
+            }
             const now = new Date();
             const validTo = new Date(cert.valid_to);
             const daysRemaining = Math.floor((validTo - now) / (1000 * 60 * 60 * 24));
-            resolve({ valid: true, expired: validTo < now, daysRemaining });
+            resolve({ 
+                valid: true, 
+                expired: validTo < now, 
+                daysRemaining: daysRemaining 
+            });
         });
         req.on('error', () => resolve({ valid: false }));
-        req.on('timeout', () => { req.destroy(); resolve({ valid: false }); });
+        req.on('timeout', () => { 
+            req.destroy(); 
+            resolve({ valid: false }); 
+        });
         req.end();
     });
 }
@@ -221,6 +228,7 @@ app.post('/api/scan-batch', async (req, res) => {
     if (batchState.status === 'scanning') {
         return res.status(409).json({ error: 'Skannaus jo käynnissä!' });
     }
+    // Käynnistä skannaus taustalla
     runBatchScan().catch(console.error);
     res.json({ message: 'Massaskannaus käynnistetty! Seuraa edistymistä.' });
 });
@@ -253,8 +261,8 @@ app.get('/api/batch-results', (req, res) => {
 // 5. KÄYNNISTYS
 // ============================================
 app.listen(PORT, () => {
-    console.log('🦡 White Weasel Recon v3.0 — Yksinkertainen versio');
+    console.log('🦡 White Weasel Recon v3.1');
     console.log('✅ Palvelin käynnissä portissa ' + PORT);
     console.log('📋 ' + TARGET_DOMAINS.length + ' kohdetta listassa');
-    console.log('📝 Skannaus käynnistyy vain napista painamalla');
+    console.log('📝 Skannaus käynnistyy vain napista');
 });
